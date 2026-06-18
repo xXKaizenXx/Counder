@@ -66,14 +66,21 @@
   background: radial-gradient(circle at 40% 50%, #141210 0%, #080808 70%);
 }
 
-.sectionDark .themeToggle {
+.sectionDark .themeToggle,
+.sectionDark .layoutToggle {
   background: rgba(255, 255, 255, 0.08);
   border-color: rgba(255, 255, 255, 0.14);
   color: rgba(255, 255, 255, 0.85);
 }
 
-.sectionDark .themeToggle:hover {
+.sectionDark .themeToggle:hover,
+.sectionDark .layoutToggle:hover {
   background: rgba(255, 255, 255, 0.14);
+}
+
+.sectionDark .layoutToggle[aria-pressed='true'] {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.28);
 }
 
 .sectionDark .nodeTooltip {
@@ -82,10 +89,25 @@
   color: var(--white);
 }
 
-.themeToggle {
+.controlBar {
   position: absolute;
   right: var(--side-padding);
   z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.controlBarStandalone {
+  top: clamp(24px, 4vh, 40px);
+}
+
+.controlBarEmbedded {
+  top: 76px;
+}
+
+.themeToggle,
+.layoutToggle {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -107,25 +129,25 @@
     transform 0.2s ease;
 }
 
-.themeToggleStandalone {
-  top: clamp(24px, 4vh, 40px);
-}
-
-.themeToggleEmbedded {
-  top: 76px;
-}
-
-.themeToggle:hover {
+.themeToggle:hover,
+.layoutToggle:hover {
   background: rgba(255, 255, 255, 0.92);
   transform: translateY(-1px);
 }
 
-.themeToggleIcon {
+.layoutToggle[aria-pressed='true'] {
+  background: rgba(255, 255, 255, 0.88);
+  border-color: rgba(0, 0, 0, 0.18);
+}
+
+.themeToggleIcon,
+.layoutToggleIcon {
   font-size: 14px;
   line-height: 1;
 }
 
-.themeToggleLabel {
+.themeToggleLabel,
+.layoutToggleLabel {
   line-height: 1;
 }
 
@@ -405,12 +427,14 @@
     gap: 24px;
   }
 
-  .themeToggle {
+  .controlBar {
     top: 16px;
     right: 16px;
+    gap: 8px;
   }
 
-  .themeToggleLabel {
+  .themeToggleLabel,
+  .layoutToggleLabel {
     display: none;
   }
 

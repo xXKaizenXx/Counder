@@ -2,7 +2,7 @@
 
 **Live demo:** https://counder-sachin.vercel.app
 
-Full-screen motion section for the Counder homepage, delivered two ways:
+Full-screen motion section shaped as **two tangent glass globes** — the Counder logo in 3D. Global cities sit on each sphere; pulses arc across the surface toward **Cape Town** where the globes meet. Delivered two ways:
 
 1. **Section only** — the assessment core, isolated for focused review.
 2. **Homepage integration** — the same section embedded in a mock [counder.com](https://counder.com) page with header, scroll narrative, and conference reveal.
@@ -13,9 +13,9 @@ Full-screen motion section for the Counder homepage, delivered two ways:
 
 | Action | Result |
 |--------|--------|
-| **Drag canvas** | Rotate the 3D connection graph |
+| **Drag canvas** | Rotate the logo-shaped network |
 | **Hover / tap a city node** | Camera eases toward node; label appears; pulse on click |
-| **Click Cape Town hub** | Opens teleport prompt |
+| **Click Cape Town** (where rings meet) | Opens teleport prompt |
 | **Enter Cape Town** (or click hub again) | Warp transition → conference video |
 | **Conference mode toggle** | Switches light ↔ dark scene + warp variant |
 | **View homepage integration** | Toggles mock full homepage (bottom-right control) |
@@ -85,7 +85,9 @@ App.tsx
 | `SceneEffects.tsx` | Bloom post-processing (suspended during warp) |
 | `NodeLabel.tsx` | HTML labels via drei `Html` |
 | `TouchRipple.tsx` | Mobile tap ring feedback |
-| `utils/networkGraph.ts` | Node positions, city list, edge topology |
+| `utils/networkGraph.ts` | Logo-ring layout, city placement, edge topology, pulse routing |
+| `LogoSpheres.tsx` | Glass globes with graticule, wire halo, slow counter-rotation |
+| `utils/globeGeometry.ts` | Latitude/longitude grid, great-circle arc sampling |
 | `utils/sceneTheme.ts` | Light / Conference colour tokens |
 
 ### Motion & homepage chrome

@@ -5,6 +5,7 @@ import type * as THREE from 'three'
 import type { ThemeMode } from '../utils/sceneTheme'
 import { FocusContext } from '../context/cameraFocus'
 import { NetworkScene, type FocusedNodeInfo } from './NetworkScene'
+import type { NetworkLayoutMode } from '../utils/networkGraph'
 
 const DEFAULT_CAMERA = { x: 0.4, y: 0.6, z: 5.8 }
 const HUB_ZOOM = 4.15
@@ -13,6 +14,7 @@ function CameraController({
   reducedMotion,
   theme,
   isTouch,
+  networkLayout,
   suspendEffects,
   onNodeFocus,
   onHubClick,
@@ -20,6 +22,7 @@ function CameraController({
   reducedMotion: boolean
   theme: ThemeMode
   isTouch: boolean
+  networkLayout: NetworkLayoutMode
   suspendEffects?: boolean
   onNodeFocus?: (node: FocusedNodeInfo | null) => void
   onHubClick?: () => void
@@ -80,6 +83,7 @@ function CameraController({
         reducedMotion={reducedMotion}
         theme={theme}
         isTouch={isTouch}
+        networkLayout={networkLayout}
         suspendEffects={suspendEffects}
         onNodeFocus={onNodeFocus}
         onHubClick={onHubClick}
@@ -93,6 +97,7 @@ interface NetworkCanvasProps {
   reducedMotion: boolean
   theme: ThemeMode
   isTouch: boolean
+  networkLayout: NetworkLayoutMode
   suspendRendering?: boolean
   preserveDrawingBuffer?: boolean
   onNodeFocus?: (node: FocusedNodeInfo | null) => void
@@ -103,6 +108,7 @@ export function NetworkCanvas({
   reducedMotion,
   theme,
   isTouch,
+  networkLayout,
   suspendRendering = false,
   preserveDrawingBuffer = false,
   onNodeFocus,
@@ -119,6 +125,7 @@ export function NetworkCanvas({
         reducedMotion={reducedMotion}
         theme={theme}
         isTouch={isTouch}
+        networkLayout={networkLayout}
         suspendEffects={suspendRendering}
         onNodeFocus={onNodeFocus}
         onHubClick={onHubClick}

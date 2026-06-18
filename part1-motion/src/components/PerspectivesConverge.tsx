@@ -57,6 +57,7 @@ export function PerspectivesConverge({ variant = 'standalone' }: { variant?: 'st
   const contentRef = useRef<HTMLDivElement>(null)
   const canvasWrapRef = useRef<HTMLDivElement>(null)
   const [theme, setTheme] = useState<ThemeMode>('light')
+  const [networkLayout, setNetworkLayout] = useState<'neural' | 'logo'>('neural')
   const [touchFlash, setTouchFlash] = useState(false)
   const [teleportPhase, setTeleportPhase] = useState<TeleportPhase>('idle')
   const promptTimerRef = useRef<number | undefined>(undefined)
@@ -134,6 +135,10 @@ export function PerspectivesConverge({ variant = 'standalone' }: { variant?: 'st
 
   const toggleTheme = () => {
     setTheme((t) => (t === 'light' ? 'dark' : 'light'))
+  }
+
+  const toggleLayout = () => {
+    setNetworkLayout((mode) => (mode === 'neural' ? 'logo' : 'neural'))
   }
 
   const suspendScene = teleportPhase === 'warp' || teleportPhase === 'video'
@@ -309,8 +314,8 @@ export function PerspectivesConverge({ variant = 'standalone' }: { variant?: 'st
         ? 'Tap Cape Town again to enter'
         : 'Click Cape Town again to enter'
       : isTouch
-        ? 'Drag to rotate · Tap Cape Town to explore'
-        : 'Drag to rotate · Click Cape Town to explore'
+        ? 'Drag to rotate · Tap Cape Town · Reconstitute for logo'
+        : 'Drag to rotate · Click Cape Town · Reconstitute to form the logo'
 
   return (
     <section
@@ -320,19 +325,42 @@ export function PerspectivesConverge({ variant = 'standalone' }: { variant?: 'st
       aria-label="Interactive network of collective understanding"
       data-theme={theme}
     >
-      <button
-        type="button"
-        className={`${styles.themeToggle} ${variant === 'embedded' ? styles.themeToggleEmbedded : styles.themeToggleStandalone}`}
-        onClick={toggleTheme}
-        aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+      <div
+        className={`${styles.controlBar} ${variant === 'embedded' ? styles.controlBarEmbedded : styles.controlBarStandalone}`}
       >
-        <span className={styles.themeToggleIcon} aria-hidden="true">
-          {theme === 'light' ? '◐' : '◑'}
-        </span>
-        <span className={styles.themeToggleLabel}>
-          {theme === 'light' ? 'Conference mode' : 'Light mode'}
-        </span>
-      </button>
+        <button
+          type="button"
+          className={styles.layoutToggle}
+          onClick={toggleLayout}
+          aria-pressed={networkLayout === 'logo'}
+          aria-label={
+            networkLayout === 'neural'
+              ? 'Reconstitute network into Counder logo spheres'
+              : 'Return network to scattered neural layout'
+          }
+        >
+          <span className={styles.layoutToggleIcon} aria-hidden="true">
+            {networkLayout === 'neural' ? '◎' : '✦'}
+          </span>
+          <span className={styles.layoutToggleLabel}>
+            {networkLayout === 'neural' ? 'Reconstitute' : 'Scatter'}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          className={styles.themeToggle}
+          onClick={toggleTheme}
+          aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+        >
+          <span className={styles.themeToggleIcon} aria-hidden="true">
+            {theme === 'light' ? '◐' : '◑'}
+          </span>
+          <span className={styles.themeToggleLabel}>
+            {theme === 'light' ? 'Conference mode' : 'Light mode'}
+          </span>
+        </button>
+      </div>
 
       <div ref={canvasWrapRef} className={canvasClass}>
         <Suspense fallback={<div className={styles.canvasFallback} aria-hidden="true" />}>
@@ -340,6 +368,7 @@ export function PerspectivesConverge({ variant = 'standalone' }: { variant?: 'st
             reducedMotion={reducedMotion}
             theme={theme}
             isTouch={isTouch}
+            networkLayout={networkLayout}
             suspendRendering={suspendScene}
             preserveDrawingBuffer={variant === 'embedded'}
             onNodeFocus={handleNodeFocus}
@@ -370,8 +399,9 @@ export function PerspectivesConverge({ variant = 'standalone' }: { variant?: 'st
 
         <p ref={bodyRef} className={styles.body}>
           Remarkable people from every continent, every discipline — their insights
-          streaming toward one place. Once a year, five hundred voices gather where
-          today meets tomorrow.
+          streaming along the network toward one meeting point. Once a year, five
+          hundred voices gather in Cape Town. Tap <em>Reconstitute</em> to watch the
+          network fold into the Counder mark — two spheres meeting where perspectives connect.
         </p>
 
         <ul ref={rolesRef} className={styles.cities} aria-label="Global network cities">

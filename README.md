@@ -125,7 +125,7 @@ npm run preview
 
 ### Concept: *Perspectives Converge*
 
-An abstract **3D connection graph** — nodes represent global cities and member archetypes; edges carry **light pulses** toward the **Cape Town hub** (Counder Conference 2027). The story: remarkable perspectives streaming toward one place, once a year, where understanding begins.
+An abstract **logo-shaped dual-sphere network** — two sleek glass globes (large left, smaller bottom-right) tangent where they meet. **Global cities** sit on each sphere's surface; **light pulses** travel great-circle arcs toward **Cape Town** at the tangency point.
 
 ### Cape Town teleport adventure
 
