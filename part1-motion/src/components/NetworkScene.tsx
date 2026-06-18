@@ -50,6 +50,7 @@ interface NetworkSceneProps {
   reducedMotion: boolean
   theme: ThemeMode
   isTouch: boolean
+  suspendEffects?: boolean
   onNodeFocus?: (node: FocusedNodeInfo | null) => void
   onHubClick?: () => void
   hubZoom: number
@@ -59,6 +60,7 @@ export function NetworkScene({
   reducedMotion,
   theme,
   isTouch,
+  suspendEffects = false,
   onNodeFocus,
   onHubClick,
   hubZoom,
@@ -169,7 +171,7 @@ export function NetworkScene({
           <HubRipple key={rippleKey} />
         </GraphRotation>
 
-        <SceneEffects reducedMotion={reducedMotion} />
+        <SceneEffects reducedMotion={reducedMotion || suspendEffects} />
         <PositionSync />
       </NetworkContext.Provider>
     </ThemeContext.Provider>

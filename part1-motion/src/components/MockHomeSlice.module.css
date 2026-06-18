@@ -288,70 +288,105 @@
 
 .conference {
   position: relative;
-  min-height: 88vh;
+  min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
-  align-items: flex-end;
-  padding: clamp(80px, 14vh, 140px) var(--side-padding);
-  background:
-    linear-gradient(145deg, rgba(0, 0, 0, 0.55) 0%, rgba(0, 0, 0, 0.2) 55%),
-    linear-gradient(200deg, #3d3530 0%, #1a1814 40%, #0d0c0b 100%);
+  align-items: center;
+  justify-content: center;
+  padding: clamp(100px, 14vh, 140px) var(--side-padding);
   overflow: hidden;
+  color: var(--white);
+}
+
+.conferenceBg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 42%;
+  will-change: transform;
 }
 
 .conferenceScrim {
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    to top,
-    rgba(0, 0, 0, 0.72) 0%,
-    rgba(0, 0, 0, 0.35) 45%,
-    rgba(0, 0, 0, 0.15) 100%
-  );
+  background:
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0.28) 42%, rgba(0, 0, 0, 0.62) 100%),
+    radial-gradient(ellipse 90% 70% at 50% 45%, transparent 0%, rgba(0, 0, 0, 0.35) 100%);
   pointer-events: none;
   will-change: transform;
   transform-origin: center center;
 }
 
+.conferenceMark {
+  position: absolute;
+  left: var(--side-padding);
+  bottom: clamp(28px, 5vh, 52px);
+  z-index: 2;
+  width: clamp(28px, 3vw, 36px);
+  height: auto;
+  color: var(--white);
+  opacity: 0.92;
+  pointer-events: none;
+}
+
 .conferenceInner {
   position: relative;
   z-index: 1;
-  max-width: 520px;
+  width: 100%;
+  max-width: 920px;
+  margin: 0 auto;
+  text-align: center;
 }
 
 .conferenceTitle {
-  margin: 0 0 20px;
-  font-size: clamp(1.75rem, 4vw, 2.75rem);
-  font-weight: 400;
-  line-height: 1.08;
-  letter-spacing: -0.04em;
+  margin: 0 0 22px;
+  font-size: clamp(2.1rem, 5.2vw, 4.25rem);
+  font-weight: 500;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
   color: var(--white);
+  text-wrap: balance;
 }
 
 .conferenceLens {
-  margin: 0 0 28px;
-  font-size: clamp(1rem, 1.8vw, 1.125rem);
+  margin: 0 0 36px;
+  font-family: var(--font-mono);
+  font-size: clamp(0.62rem, 1.1vw, 0.78rem);
+  font-weight: 400;
   line-height: 1.5;
-  color: rgba(255, 255, 255, 0.75);
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.82);
 }
 
 .conferenceCta {
   display: inline-flex;
   align-items: center;
-  padding: 12px 26px;
+  justify-content: center;
+  min-width: 140px;
+  padding: 15px 44px;
   border-radius: 100px;
-  background: rgba(255, 255, 255, 0.14);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.28);
   color: var(--white);
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 500;
   text-decoration: none;
-  transition: background 0.2s ease;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .conferenceCta:hover {
-  background: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.24);
+  transform: translateY(-1px);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.28);
 }
 
 .joinStrip {
@@ -477,6 +512,19 @@
 }
 
 @media (max-width: 900px) {
+  .conferenceTitle {
+    font-size: clamp(1.85rem, 8vw, 2.5rem);
+  }
+
+  .conferenceLens {
+    letter-spacing: 0.18em;
+    margin-bottom: 28px;
+  }
+
+  .conferenceCta {
+    padding: 14px 36px;
+  }
+
   .pillarsGrid {
     grid-template-columns: 1fr;
   }

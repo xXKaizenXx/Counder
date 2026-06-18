@@ -137,7 +137,23 @@
   border-radius: 12px;
   transition: box-shadow 0.35s ease;
   transform-origin: center center;
-  will-change: transform, filter;
+}
+
+.canvasSnapshot {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.sectionTeleporting .canvasWrap {
+  contain: layout paint style;
+  will-change: transform;
+  transform: translateZ(0);
 }
 
 .canvasTouchFlash {

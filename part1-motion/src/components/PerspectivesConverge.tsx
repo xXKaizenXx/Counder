@@ -6,6 +6,7 @@ import type { FocusedNodeInfo } from './NetworkScene'
 import type { ThemeMode } from '../utils/sceneTheme'
 import type { TeleportPhase } from '../types/teleport'
 import { NETWORK_CITIES } from '../utils/networkGraph'
+import { clearCanvasSnapshot, mountCanvasSnapshot } from '../utils/canvasSnapshot'
 import styles from './PerspectivesConverge.module.css'
 
 const NetworkCanvas = lazy(() =>
@@ -59,6 +60,7 @@ export function PerspectivesConverge({ variant = 'standalone' }: { variant?: 'st
   const [touchFlash, setTouchFlash] = useState(false)
   const [teleportPhase, setTeleportPhase] = useState<TeleportPhase>('idle')
   const promptTimerRef = useRef<number | undefined>(undefined)
+  const snapshotCleanupRef = useRef<(() => void) | null>(null)
   const isTouch = useIsTouchDevice()
   const [reducedMotion] = useState(
     () =>
@@ -73,12 +75,33 @@ export function PerspectivesConverge({ variant = 'standalone' }: { variant?: 'st
 
   const handleConfirmTeleport = useCallback(() => {
     if (promptTimerRef.current) window.clearTimeout(promptTimerRef.current)
-    if (reducedMotion) {
-      setTeleportPhase('video')
-    } else {
-      setTeleportPhase('warp')
+
+    const beginTeleport = () => {
+      if (reducedMotion) {
+        setTeleportPhase('video')
+      } else {
+        setTeleportPhase('warp')
+      }
     }
-  }, [reducedMotion])
+
+    if (variant === 'embedded' && canvasWrapRef.current) {
+      snapshotCleanupRef.current?.()
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (canvasWrapRef.current) {
+            snapshotCleanupRef.current = mountCanvasSnapshot(
+              canvasWrapRef.current,
+              styles.canvasSnapshot,
+            )
+          }
+          beginTeleport()
+        })
+      })
+      return
+    }
+
+    beginTeleport()
+  }, [reducedMotion, variant])
 
   const handleHubClick = useCallback(() => {
     if (teleportPhase === 'warp' || teleportPhase === 'video') return
@@ -112,6 +135,30 @@ export function PerspectivesConverge({ variant = 'standalone' }: { variant?: 'st
   const toggleTheme = () => {
     setTheme((t) => (t === 'light' ? 'dark' : 'light'))
   }
+
+  const suspendScene = teleportPhase === 'warp' || teleportPhase === 'video'
+
+  useEffect(() => {
+    if (teleportPhase !== 'idle') return
+    snapshotCleanupRef.current?.()
+    snapshotCleanupRef.current = null
+    clearCanvasSnapshot(canvasWrapRef.current)
+  }, [teleportPhase])
+
+  useEffect(() => {
+    if (variant !== 'embedded' || reducedMotion) return
+
+    if (suspendScene) {
+      ScrollTrigger.disable()
+      if (canvasWrapRef.current) gsap.killTweensOf(canvasWrapRef.current)
+      if (contentRef.current) gsap.killTweensOf(contentRef.current)
+      return
+    }
+
+    ScrollTrigger.enable()
+    const refresh = () => ScrollTrigger.refresh()
+    requestAnimationFrame(refresh)
+  }, [suspendScene, variant, reducedMotion])
 
   useEffect(() => {
     const section = sectionRef.current
@@ -244,6 +291,7 @@ export function PerspectivesConverge({ variant = 'standalone' }: { variant?: 'st
   const sectionClass = [
     styles.section,
     theme === 'dark' ? styles.sectionDark : '',
+    variant === 'embedded' && suspendScene ? styles.sectionTeleporting : '',
   ]
     .filter(Boolean)
     .join(' ')
@@ -292,6 +340,8 @@ export function PerspectivesConverge({ variant = 'standalone' }: { variant?: 'st
             reducedMotion={reducedMotion}
             theme={theme}
             isTouch={isTouch}
+            suspendRendering={suspendScene}
+            preserveDrawingBuffer={variant === 'embedded'}
             onNodeFocus={handleNodeFocus}
             onHubClick={handleHubClick}
           />
@@ -338,6 +388,8 @@ export function PerspectivesConverge({ variant = 'standalone' }: { variant?: 'st
 
       <CapeTownTeleport
         phase={teleportPhase}
+        theme={theme}
+        embedded={variant === 'embedded'}
         isTouch={isTouch}
         canvasWrapRef={canvasWrapRef}
         sectionRef={sectionRef}

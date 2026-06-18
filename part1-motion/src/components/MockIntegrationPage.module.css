@@ -5,3 +5,12 @@
 .page main {
   display: block;
 }
+
+.page[data-teleporting] :global(header),
+.page[data-teleporting] main > :not(#network),
+.page[data-teleporting] :global(footer) {
+  visibility: hidden;
+  pointer-events: none;
+  content-visibility: hidden;
+  contain: strict;
+}

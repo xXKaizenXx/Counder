@@ -178,6 +178,26 @@ export function useIntegrationScroll(
       }
 
       if (conferenceScrim && conference) {
+        const conferenceBg = conference.querySelector<HTMLElement>('[data-scroll-item="conference-bg"]')
+
+        if (conferenceBg) {
+          gsap.fromTo(
+            conferenceBg,
+            { scale: 1.08, y: 0 },
+            {
+              scale: 1,
+              y: -40,
+              ease: 'none',
+              scrollTrigger: {
+                trigger: conference,
+                start: 'top bottom',
+                end: 'bottom top',
+                scrub: 1.2,
+              },
+            },
+          )
+        }
+
         gsap.fromTo(
           conferenceScrim,
           { scale: 1.1 },

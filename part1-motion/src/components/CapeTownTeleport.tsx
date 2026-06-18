@@ -1,11 +1,16 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, type CSSProperties } from 'react'
+import { createPortal } from 'react-dom'
 import gsap from 'gsap'
 import { CONFERENCE_VIDEO_SRC } from '../constants/media'
+import { useScrollLock } from '../hooks/useScrollLock'
+import type { ThemeMode } from '../utils/sceneTheme'
 import type { TeleportPhase } from '../types/teleport'
 import styles from './CapeTownTeleport.module.css'
 
 interface CapeTownTeleportProps {
   phase: TeleportPhase
+  theme: ThemeMode
+  embedded?: boolean
   isTouch: boolean
   canvasWrapRef: React.RefObject<HTMLDivElement | null>
   sectionRef: React.RefObject<HTMLElement | null>
@@ -17,6 +22,8 @@ interface CapeTownTeleportProps {
 
 export function CapeTownTeleport({
   phase,
+  theme,
+  embedded = false,
   isTouch,
   canvasWrapRef,
   sectionRef,
@@ -26,12 +33,17 @@ export function CapeTownTeleport({
   onCancelPrompt,
 }: CapeTownTeleportProps) {
   const overlayRef = useRef<HTMLDivElement>(null)
+  const curtainRef = useRef<HTMLDivElement>(null)
   const portalRef = useRef<HTMLDivElement>(null)
   const tunnelRef = useRef<HTMLDivElement>(null)
   const flashRef = useRef<HTMLDivElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const promptRef = useRef<HTMLDivElement>(null)
-  const warpPlayed = useRef(false)
+  const warpSessionRef = useRef(0)
+  const warpHandedOff = useRef(false)
+  const captionRef = useRef<HTMLDivElement>(null)
+
+  useScrollLock(phase !== 'idle')
 
   useEffect(() => {
     if (phase !== 'prompt') return
@@ -47,7 +59,6 @@ export function CapeTownTeleport({
     const video = videoRef.current
     if (!video) return
 
-    document.body.style.overflow = 'hidden'
     const play = async () => {
       try {
         await video.play()
@@ -62,11 +73,22 @@ export function CapeTownTeleport({
     }
     window.addEventListener('keydown', onKey)
     return () => {
-      document.body.style.overflow = ''
       window.removeEventListener('keydown', onKey)
       video.pause()
     }
   }, [phase, onClose])
+
+  useEffect(() => {
+    if (!embedded) return
+    const page = sectionRef.current?.closest('[data-integration-page]')
+    if (!page) return
+
+    if (phase === 'warp' || phase === 'video') {
+      page.setAttribute('data-teleporting', '')
+    } else {
+      page.removeAttribute('data-teleporting')
+    }
+  }, [phase, embedded, sectionRef])
 
   useLayoutEffect(() => {
     if (phase !== 'prompt' || !promptRef.current) return
@@ -93,54 +115,36 @@ export function CapeTownTeleport({
     return () => ctx.revert()
   }, [phase])
 
-  const runWarp = useCallback(() => {
-    const overlay = overlayRef.current
-    const portal = portalRef.current
-    const tunnel = tunnelRef.current
-    const flash = flashRef.current
-    const canvas = canvasWrapRef.current
-    const section = sectionRef.current
-    if (!overlay || !portal || !tunnel || !flash) return
-
-    warpPlayed.current = true
-    document.body.style.overflow = 'hidden'
-
-    const ctx = gsap.context(() => {
+  const runWarpDark = useCallback(
+    (
+      overlay: HTMLDivElement,
+      portal: HTMLDivElement,
+      tunnel: HTMLDivElement,
+      flash: HTMLDivElement,
+      canvas: HTMLDivElement | null,
+      section: HTMLElement | null,
+    ) => {
       gsap.set(overlay, { opacity: 1, pointerEvents: 'auto' })
       gsap.set(portal, { scale: 0, opacity: 1 })
       gsap.set(tunnel, { opacity: 0, rotation: 0 })
-      gsap.set(flash, { opacity: 0 })
+      gsap.set(flash, { opacity: 0, backgroundColor: '#ffffff' })
 
-      const tl = gsap.timeline({
-        onComplete: onWarpComplete,
-      })
+      const tl = gsap.timeline()
 
       tl.to(tunnel, { opacity: 1, duration: 0.25, ease: 'power2.out' }, 0)
-        .to(
-          tunnel,
-          { rotation: 180, duration: 2.2, ease: 'power2.in' },
-          0,
-        )
+        .to(tunnel, { rotation: 180, duration: 2.2, ease: 'power2.in' }, 0)
         .to(
           canvas,
           {
             scale: 2.8,
-            filter: 'blur(12px) brightness(1.4)',
             duration: 2,
             ease: 'power3.in',
+            force3D: true,
           },
           0.1,
         )
-        .to(
-          section,
-          {
-            backgroundColor: '#000000',
-            duration: 1.2,
-            ease: 'power2.in',
-          },
-          0.4,
-        )
-        .to(portal, { scale: 28, duration: 1.35, ease: 'power4.in' }, 0.55)
+        .to(section, { backgroundColor: '#000000', duration: 1.2, ease: 'power2.in' }, 0.4)
+        .to(portal, { scale: 28, duration: 1.35, ease: 'power4.in', force3D: true }, 0.55)
         .to(
           overlay.querySelectorAll(`.${styles.warpLine}`),
           {
@@ -152,36 +156,170 @@ export function CapeTownTeleport({
           },
           0.7,
         )
-        .to(flash, { opacity: 1, duration: 0.12, ease: 'power2.in' }, 1.75)
-        .to(flash, { opacity: 0, duration: 0.35, ease: 'power2.out' }, 1.9)
+        .to(flash, { opacity: 1, duration: 0.14, ease: 'power2.in' }, 1.68)
+        .to(
+          flash,
+          {
+            backgroundColor: '#000000',
+            duration: 0.62,
+            ease: 'power2.inOut',
+          },
+          1.82,
+        )
+        .call(
+          () => {
+            gsap.set(flash, { opacity: 1, backgroundColor: '#000000' })
+            warpHandedOff.current = true
+            onWarpComplete()
+          },
+          [],
+          '-=0.18',
+        )
+
+      return tl
+    },
+    [onWarpComplete],
+  )
+
+  const runWarpLight = useCallback(
+    (
+      curtain: HTMLDivElement,
+      canvas: HTMLDivElement | null,
+    ) => {
+      gsap.set(curtain, { opacity: 0 })
+
+      const tl = gsap.timeline()
+
+      if (canvas) {
+        tl.to(
+          canvas,
+          {
+            scale: 2.05,
+            duration: 2.05,
+            ease: 'power1.inOut',
+            force3D: true,
+          },
+          0,
+        )
+      }
+
+      tl.to(
+        curtain,
+        {
+          opacity: 1,
+          duration: 1.85,
+          ease: 'power2.inOut',
+        },
+        0,
+      ).call(
+        () => {
+          gsap.set(curtain, { opacity: 1 })
+          warpHandedOff.current = true
+          onWarpComplete()
+        },
+        [],
+        '-=0.28',
+      )
+
+      return tl
+    },
+    [onWarpComplete],
+  )
+
+  const runWarp = useCallback(() => {
+    const overlay = overlayRef.current
+    const curtain = curtainRef.current
+    const portal = portalRef.current
+    const tunnel = tunnelRef.current
+    const flash = flashRef.current
+    const canvas = canvasWrapRef.current
+    const section = sectionRef.current
+    if (!overlay) return
+    if (theme === 'light' && !curtain) return
+    if (theme === 'dark' && (!tunnel || !portal || !flash)) return
+
+    warpHandedOff.current = false
+
+    const ctx = gsap.context(() => {
+      gsap.set(overlay, { opacity: 1, pointerEvents: 'auto' })
+
+      if (theme === 'light' && curtain) {
+        runWarpLight(curtain, canvas)
+      } else if (tunnel && portal && flash) {
+        runWarpDark(overlay, portal, tunnel, flash, canvas, section)
+      }
     }, overlay)
 
-    return () => ctx.revert()
-  }, [canvasWrapRef, sectionRef, onWarpComplete])
+    return () => {
+      if (!warpHandedOff.current) ctx.revert()
+    }
+  }, [canvasWrapRef, sectionRef, theme, runWarpDark, runWarpLight])
 
   useLayoutEffect(() => {
-    if (phase !== 'warp' || warpPlayed.current) return
+    if (phase !== 'warp') return
+
+    const session = ++warpSessionRef.current
     const cleanup = runWarp()
-    return cleanup
+
+    return () => {
+      if (warpSessionRef.current === session) cleanup?.()
+    }
   }, [phase, runWarp])
+
+  useLayoutEffect(() => {
+    if (phase !== 'video' || !videoRef.current) return
+
+    const video = videoRef.current
+    const caption = captionRef.current
+
+    const ctx = gsap.context(() => {
+      gsap.set(video, { opacity: 0, scale: theme === 'light' ? 1.02 : 1.05 })
+      if (caption) gsap.set(caption, { opacity: 0, y: 14 })
+
+      gsap.to(video, {
+        opacity: 1,
+        scale: 1,
+        duration: theme === 'light' ? 1.2 : 0.95,
+        ease: 'power2.out',
+      })
+
+      if (caption) {
+        gsap.to(caption, {
+          opacity: 1,
+          y: 0,
+          duration: 0.75,
+          delay: 0.45,
+          ease: 'power2.out',
+        })
+      }
+    }, video)
+
+    return () => ctx.revert()
+  }, [phase, theme])
 
   useEffect(() => {
     if (phase === 'idle') {
-      warpPlayed.current = false
-      document.body.style.overflow = ''
+      warpHandedOff.current = false
       const canvas = canvasWrapRef.current
       const section = sectionRef.current
       if (canvas) gsap.set(canvas, { clearProps: 'scale,filter' })
       if (section) gsap.set(section, { clearProps: 'backgroundColor' })
+      if (curtainRef.current) gsap.set(curtainRef.current, { opacity: 0 })
     }
   }, [phase, canvasWrapRef, sectionRef])
 
   if (phase === 'idle') return null
 
-  return (
+  const teleportUi = (
     <>
       {phase === 'prompt' && (
-        <div className={styles.promptOverlay} role="dialog" aria-modal="true" aria-labelledby="cape-town-prompt">
+        <div
+          className={styles.promptOverlay}
+          data-theme={theme}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="cape-town-prompt"
+        >
           <div ref={promptRef} className={styles.promptCard}>
             <div className={styles.promptRing} aria-hidden="true" />
             <p className={styles.promptEyebrow}>Cape Town · 2027</p>
@@ -206,19 +344,30 @@ export function CapeTownTeleport({
       {(phase === 'warp' || phase === 'video') && (
         <div
           ref={overlayRef}
-          className={`${styles.warpOverlay} ${phase === 'video' ? styles.warpOverlayDone : ''}`}
+          className={[
+            styles.warpOverlay,
+            theme === 'light' ? styles.warpOverlayLight : '',
+            phase === 'video' ? styles.warpOverlayDone : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
           aria-hidden={phase === 'video'}
         >
-          <div ref={tunnelRef} className={styles.tunnel} aria-hidden="true">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <span key={i} className={styles.tunnelRing} style={{ '--i': i } as CSSProperties} />
-            ))}
-          </div>
-          {Array.from({ length: 12 }).map((_, i) => (
-            <span key={i} className={styles.warpLine} style={{ '--i': i } as CSSProperties} />
-          ))}
-          <div ref={portalRef} className={styles.portal} aria-hidden="true" />
-          <div ref={flashRef} className={styles.flash} aria-hidden="true" />
+          <div ref={curtainRef} className={styles.warpCurtain} aria-hidden="true" />
+          {theme === 'dark' && (
+            <>
+              <div ref={tunnelRef} className={styles.tunnel} aria-hidden="true">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <span key={i} className={styles.tunnelRing} style={{ '--i': i } as CSSProperties} />
+                ))}
+              </div>
+              {Array.from({ length: 12 }).map((_, i) => (
+                <span key={i} className={styles.warpLine} style={{ '--i': i } as CSSProperties} />
+              ))}
+              <div ref={portalRef} className={styles.portal} aria-hidden="true" />
+              <div ref={flashRef} className={styles.flash} aria-hidden="true" />
+            </>
+          )}
         </div>
       )}
 
@@ -237,7 +386,7 @@ export function CapeTownTeleport({
               preload="auto"
             />
             <div className={styles.videoScrim} aria-hidden="true" />
-            <div className={styles.videoCaption}>
+            <div ref={captionRef} className={styles.videoCaption}>
               <p className={styles.videoEyebrow}>Counder Conference · Cape Town</p>
               <p className={styles.videoTitle}>You&apos;ve arrived.</p>
             </div>
@@ -246,4 +395,6 @@ export function CapeTownTeleport({
       )}
     </>
   )
+
+  return createPortal(teleportUi, document.body)
 }

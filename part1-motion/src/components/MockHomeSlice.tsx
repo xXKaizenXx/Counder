@@ -1,4 +1,5 @@
 import { COUNDER_LINKS } from '../constants/counderLinks'
+import { CONFERENCE_HERO_IMAGE } from '../constants/media'
 import { ScrollLink } from './ScrollLink'
 import styles from './MockHomeSlice.module.css'
 
@@ -124,14 +125,38 @@ export function MockPillars() {
   )
 }
 
+function ConferenceLogoMark({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 35 26" fill="none" aria-hidden="true">
+      <circle cx="13" cy="13" r="11.74" stroke="currentColor" strokeWidth="2.39" />
+      <circle cx="26" cy="17" r="7.71" stroke="currentColor" strokeWidth="2.44" />
+    </svg>
+  )
+}
+
 export function MockConferenceBelow() {
   return (
-    <section className={styles.conference} id="conference" data-scroll-block="conference" aria-hidden="true">
+    <section
+      className={styles.conference}
+      id="conference"
+      data-scroll-block="conference"
+      aria-label="Counder Conference 2027"
+    >
+      <img
+        className={styles.conferenceBg}
+        src={CONFERENCE_HERO_IMAGE}
+        alt=""
+        loading="lazy"
+        decoding="async"
+        data-scroll-item="conference-bg"
+      />
+      <div className={styles.conferenceScrim} data-scroll-item="conference-scrim" aria-hidden="true" />
+      <ConferenceLogoMark className={styles.conferenceMark} />
       <div className={styles.conferenceInner} data-scroll-item="conference-inner">
         <h3 className={styles.conferenceTitle} data-scroll-item="conference-reveal">
           Counder Conference 2027.
           <br />
-          25&ndash;29 January. Cape Town.
+          25&ndash;29 January: Cape Town.
         </h3>
         <p className={styles.conferenceLens} data-scroll-item="conference-reveal">
           This year&rsquo;s lens: The AI Inflection.
@@ -146,7 +171,6 @@ export function MockConferenceBelow() {
           Join
         </a>
       </div>
-      <div className={styles.conferenceScrim} data-scroll-item="conference-scrim" />
     </section>
   )
 }

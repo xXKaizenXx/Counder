@@ -13,12 +13,14 @@ function CameraController({
   reducedMotion,
   theme,
   isTouch,
+  suspendEffects,
   onNodeFocus,
   onHubClick,
 }: {
   reducedMotion: boolean
   theme: ThemeMode
   isTouch: boolean
+  suspendEffects?: boolean
   onNodeFocus?: (node: FocusedNodeInfo | null) => void
   onHubClick?: () => void
 }) {
@@ -78,6 +80,7 @@ function CameraController({
         reducedMotion={reducedMotion}
         theme={theme}
         isTouch={isTouch}
+        suspendEffects={suspendEffects}
         onNodeFocus={onNodeFocus}
         onHubClick={onHubClick}
         hubZoom={HUB_ZOOM}
@@ -90,6 +93,8 @@ interface NetworkCanvasProps {
   reducedMotion: boolean
   theme: ThemeMode
   isTouch: boolean
+  suspendRendering?: boolean
+  preserveDrawingBuffer?: boolean
   onNodeFocus?: (node: FocusedNodeInfo | null) => void
   onHubClick?: () => void
 }
@@ -98,19 +103,23 @@ export function NetworkCanvas({
   reducedMotion,
   theme,
   isTouch,
+  suspendRendering = false,
+  preserveDrawingBuffer = false,
   onNodeFocus,
   onHubClick,
 }: NetworkCanvasProps) {
   return (
     <Canvas
       camera={{ position: [0.4, 0.6, 5.8], fov: 38 }}
-      dpr={[1, 2]}
-      gl={{ antialias: true, alpha: true }}
+      dpr={suspendRendering ? 1 : [1, 2]}
+      frameloop={suspendRendering ? 'demand' : 'always'}
+      gl={{ antialias: true, alpha: true, preserveDrawingBuffer }}
     >
       <CameraController
         reducedMotion={reducedMotion}
         theme={theme}
         isTouch={isTouch}
+        suspendEffects={suspendRendering}
         onNodeFocus={onNodeFocus}
         onHubClick={onHubClick}
       />

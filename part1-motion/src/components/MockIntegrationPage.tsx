@@ -19,7 +19,12 @@ export function MockIntegrationPage({ animationsReady = true }: { animationsRead
   useIntegrationScroll(pageRef, animationsReady)
 
   return (
-    <div ref={pageRef} className={styles.page} data-anim-ready={animationsReady ? '' : undefined}>
+    <div
+      ref={pageRef}
+      className={styles.page}
+      data-integration-page
+      data-anim-ready={animationsReady ? '' : undefined}
+    >
       <CounderHeader />
 
       <main>
