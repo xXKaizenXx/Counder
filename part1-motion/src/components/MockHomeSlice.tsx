@@ -1,5 +1,6 @@
 import { COUNDER_LINKS } from '../constants/counderLinks'
 import { CONFERENCE_HERO_IMAGE } from '../constants/media'
+import { CounderLogoMark } from './CounderLogoMark'
 import { ScrollLink } from './ScrollLink'
 import styles from './MockHomeSlice.module.css'
 
@@ -125,15 +126,6 @@ export function MockPillars() {
   )
 }
 
-function ConferenceLogoMark({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 35 26" fill="none" aria-hidden="true">
-      <circle cx="13" cy="13" r="11.74" stroke="currentColor" strokeWidth="2.39" />
-      <circle cx="26" cy="17" r="7.71" stroke="currentColor" strokeWidth="2.44" />
-    </svg>
-  )
-}
-
 export function MockConferenceBelow() {
   return (
     <section
@@ -151,7 +143,7 @@ export function MockConferenceBelow() {
         data-scroll-item="conference-bg"
       />
       <div className={styles.conferenceScrim} data-scroll-item="conference-scrim" aria-hidden="true" />
-      <ConferenceLogoMark className={styles.conferenceMark} />
+      <CounderLogoMark className={styles.conferenceMark} />
       <div className={styles.conferenceInner} data-scroll-item="conference-inner">
         <h3 className={styles.conferenceTitle} data-scroll-item="conference-reveal">
           Counder Conference 2027.

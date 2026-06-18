@@ -3,22 +3,42 @@
 ## §4. Matchmaking & Connection Recommendations
 
 **Document:** Counder Connect Full-System Specification  
-**Version:** 0.1-draft  
+**Version:** 1.0 — Take-Home Assessment (Part 2.2)  
+**Author:** Sachin  
 **Depends on:** §1 Identity & Profiles, §2 Events & Scheduling, §3 Messaging  
+**Architecture:** [`architecture.md`](architecture.md) — modular monolith, Redis cache, Inngest workers  
 **Owner:** Platform Engineering
+
+> This section is written as an excerpt from a larger spec — precise enough for a coding agent or senior engineer to implement without guesswork. It stands alone but references sibling sections where schemas are shared.
+
+---
+
+### 4.0 Assessment scope mapping
+
+| Brief requirement | This section |
+|-------------------|--------------|
+| Matching algorithm strategy | §4.3 — hybrid rules → embeddings → RAG for conversation starters only |
+| Signals and data inputs | §4.4 — structured profile, behavioural, contextual |
+| How recommendations are surfaced | §4.8 — Connect home, conference tab, digests, push, chatbot |
+| Nuanced business connections (investor ↔ expert, GP ↔ LP, etc.) | §4.4.4 complementarity matrix + seeking/offering tags |
+| Actionable implementation detail | §4.6 schema, §4.7 APIs/jobs, §4.10 acceptance criteria |
 
 ---
 
 ### 4.1 Purpose
 
-The matchmaking subsystem recommends **high-value introductions** between Counder members based on complementary roles, shared interests, conference context, and explicit opt-in preferences. Examples:
+The matchmaking subsystem recommends **high-value introductions** between Counder members based on complementary roles, shared interests, conference context, and explicit opt-in preferences.
 
-- Investor seeking sector expert (e.g. quantum computing professor)
-- Fund manager seeking Limited Partner
-- Corporate CEO seeking Africa market operator
-- Mission Partner seeking co-investors in a thesis area
+**Examples the system must handle:**
 
-Recommendations must feel **curated, not spammy** — aligned with Counder’s invite-only trust model.
+| Member A | Seeking | Member B | Offering |
+|----------|---------|----------|----------|
+| Investor | Sector expert (quantum) | Professor | `sector_insight` in quantum |
+| Fund manager | Limited Partners | LP family office | `lp` + sector overlap |
+| Corporate CEO | Africa market operator | Operator | `africa_exposure` |
+| Mission Partner | Co-investors in thesis | GP | `co_invest` + shared sector |
+
+Recommendations must feel **curated, not spammy** — aligned with Counder’s invite-only trust model and the brand promise of *collective understanding*.
 
 ---
 
@@ -30,24 +50,26 @@ Recommendations must feel **curated, not spammy** — aligned with Counder’s i
 - Support **bidirectional consent** before contact details or chat unlock
 - Explain *why* two people were matched (transparency builds trust)
 - Re-rank when profiles, goals, or event schedules change
-- Handle 3,000 concurrent users reading recommendations from cache
+- Serve 3,000 concurrent users reading recommendations from cache (p95 &lt; 120ms)
 
 **Non-Goals (v1)**
 
 - Automated meeting booking without user action
 - LinkedIn-style open messaging to anyone
 - Fully autonomous ML with no human override
-- Cross-platform scraping of external data
+- External data scraping
 
 ---
 
 ### 4.3 Algorithm Strategy: Hybrid Rules + Embeddings
 
-**Phase 1 (launch): Rules-based scoring (deterministic, auditable)**  
-**Phase 2 (post-conference data): Embedding re-rank via pgvector**  
-**Phase 3 (optional): RAG-generated conversation starters only — not match selection**
+| Phase | Approach | When |
+|-------|----------|------|
+| **1 — Launch** | Rules-based scoring (deterministic, auditable) | Conference v1 |
+| **2 — Post-conference** | Embedding re-rank via pgvector | Enough profile + outcome data |
+| **3 — Optional** | RAG-generated conversation starters | Never for match *selection* |
 
-#### 4.3.1 Pipeline Overview
+#### 4.3.1 Pipeline
 
 ```
 ┌──────────────┐    ┌─────────────┐    ┌──────────────┐    ┌─────────────┐
@@ -61,23 +83,23 @@ Recommendations must feel **curated, not spammy** — aligned with Counder’s i
                     └─────────────┘    └──────────────┘
 ```
 
-1. **Candidate generation** — For user `U`, fetch pool `P` where:
-   - `P` = active members with `intro_opt_in = true`
-   - Same `conference_edition` OR both in `network` tier
-   - Exclude blocked users, existing connections, pending intro requests
-   - Cap `|P|` at 2,000 via pre-filter (geo, sector, role)
+1. **Candidate generation** — For user `U`, pool `P` where:
+   - `intro_opt_in = true`
+   - Same `conference_edition` OR both in year-round `network` tier
+   - Exclude blocks, existing connections, pending intros
+   - Cap `|P|` at 2,000 via geo/sector/role pre-filter
 
-2. **Hard filters (must pass all)**
-   - Neither user has `do_not_introduce` flag with the other
-   - Visibility tier allows discovery (see §4.5)
-   - Not same organisation if `same_org_intro = false` on either profile
+2. **Hard filters** — Must pass all:
+   - No `do_not_introduce` between pair
+   - Visibility tier allows discovery (§4.5)
+   - `same_org_intro = false` respected
    - Admin suppression list clear
 
-3. **Rules score** — Weighted sum (configurable in `match_weights` table)
+3. **Rules score** — Weighted sum from `match_weights` table (versioned for A/B)
 
-4. **Embedding re-rank (Phase 2)** — Cosine similarity between profile embedding vectors; blend: `final = 0.65 * rules + 0.35 * semantic`
+4. **Embedding re-rank (Phase 2)** — `final = 0.65 × rules + 0.35 × cosine_similarity(profile_embedding)`
 
-5. **Diversity pass** — MMR (maximal marginal relevance) to avoid 10 identical “LP” recommendations; ensure sector/geo spread in top 10
+5. **Diversity pass** — MMR on top 50 → top 10; avoid duplicate archetypes; spread sectors/geos
 
 ---
 
@@ -87,77 +109,71 @@ Recommendations must feel **curated, not spammy** — aligned with Counder’s i
 
 | Signal | Source | Scoring use |
 |--------|--------|-------------|
-| `member_role` | Profile enum: `investor`, `operator`, `expert`, `lp`, `gp`, `founder`, `corporate`, `philanthropy`, `other` | Complementarity matrix (e.g. investor ↔ expert +25) |
-| `sectors[]` | Taxonomy (≤5) | Jaccard overlap × 20; cross-sector bonus +10 if roles complement |
-| `geographies[]` | ISO region codes | Overlap +5; **complementary geo** (one has `seeking: africa`, other `expertise: africa`) +15 |
-| `investment_thesis` | Free text (max 500 chars) | Embedding similarity (Phase 2) |
-| `seeking[]` | Multi-select: `lp`, `deal_flow`, `co_invest`, `mentorship`, `sector_insight`, `africa_exposure`, … | Match against `offering[]` on candidate (+20 per hit, cap 40) |
-| `offering[]` | Symmetric to seeking | As above |
-| `seniority_band` | `emerging`, `established`, `icon` | Optional: prefer peer-level for salons (+5) |
-| `languages[]` | ISO 639-1 | +8 if shared working language |
-| `conference_attendance` | Boolean + edition year | Required for conference-mode recommendations |
-| `session_interests[]` | From agenda bookmarks | +12 per shared session interest |
+| `member_role` | Enum: `investor`, `operator`, `expert`, `lp`, `gp`, `founder`, `corporate`, `philanthropy`, `other` | Complementarity matrix |
+| `sectors[]` | Taxonomy (≤5) | Jaccard × 20; cross-sector +10 if roles complement |
+| `geographies[]` | ISO region | Overlap +5; complementary geo +15 |
+| `investment_thesis` | Text (≤500 chars) | Embedding similarity (Phase 2) |
+| `seeking[]` / `offering[]` | Multi-select tags | +20 per hit, cap 40 |
+| `seniority_band` | `emerging`, `established`, `icon` | Peer-level salons +5 |
+| `languages[]` | ISO 639-1 | Shared language +8 |
+| `conference_attendance` | Boolean + edition | Required for conference-mode recs |
+| `session_interests[]` | Agenda bookmarks | +12 per shared interest |
 
-#### 4.4.2 Behavioural signals (implicit, v1.1+)
+#### 4.4.2 Behavioural signals (v1.1+)
 
 | Signal | Weight | Decay |
 |--------|--------|-------|
-| Profile view (mutual) | +5 | 7 days |
-| Shared session attendance (check-in) | +15 | conference duration |
-| Positive intro outcome (`met_valuable = true`) | +10 to similar profiles | 90 days |
-| Declined intro / “not relevant” | −20 same archetype | 30 days |
-| Chat initiated post-intro | +8 | 60 days |
+| Mutual profile view | +5 | 7 days |
+| Shared session check-in | +15 | Conference duration |
+| Intro marked valuable | +10 to similar profiles | 90 days |
+| Declined / not relevant | −20 same archetype | 30 days |
+| Chat post-intro | +8 | 60 days |
 
-#### 4.4.3 Contextual boosts (event-aware)
+#### 4.4.3 Contextual boosts
 
 | Context | Boost |
 |---------|-------|
-| Both registered for same session (time overlap) | +18 |
-| Both on same excursion | +15 |
-| User stated goal in pre-conference survey | +25 if candidate matches tagged goal |
-| “New to network” (&lt; 30 days) | +10 to assigned concierge picks (admin seeded) |
+| Same registered session (time overlap) | +18 |
+| Same excursion | +15 |
+| Pre-conference survey goal match | +25 |
+| New member (&lt; 30 days) | +10 to concierge-seeded picks |
 
 #### 4.4.4 Complementarity matrix (excerpt)
 
-Rules engine loads `role_complement` CSV:
-
 ```
-investor,expert,25
-investor,operator,20
-gp,lp,30
-founder,investor,22
+investor,expert,25      gp,lp,30
+investor,operator,20    founder,investor,22
 corporate,expert,18
 ```
 
-Symmetric; score taken once per pair.
+Symmetric; scored once per pair. Full matrix in `role_complement` config table.
 
 ---
 
 ### 4.5 Privacy, Consent & Visibility
 
 - **Discovery visibility:** `network` | `connections_only` | `hidden`
-- **Intro preferences:** `open` | `warm_only` (existing mutual) | `paused`
-- Recommendations **never expose** private email/phone; only display fields in `public_card` projection
-- **Explanation strings** use only public attributes: *“You’re both focused on AI infrastructure; they’re seeking Africa market operators.”*
-- GDPR/POPIA: match scores are legitimate interest; users can export/delete via §1 data subject endpoints
-- Admin/concierge can **pin** or **suppress** recommendations (audit logged)
+- **Intro preferences:** `open` | `warm_only` | `paused`
+- Recommendations **never expose** private email/phone — only `public_card` projection
+- **Explanation strings** use public attributes only: *"You're both focused on AI infrastructure; they're seeking Africa market operators."*
+- GDPR/POPIA: export/delete via §1 data-subject endpoints; match scores = legitimate interest
+- Admin/concierge can **pin** or **suppress** (audit logged)
 
 ---
 
 ### 4.6 Data Model
 
 ```sql
--- Core recommendation record (pre-computed)
 CREATE TABLE match_recommendations (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id       UUID NOT NULL REFERENCES users(id),
   candidate_id  UUID NOT NULL REFERENCES users(id),
-  edition_id    UUID REFERENCES conference_editions(id),  -- NULL = year-round network
+  edition_id    UUID REFERENCES conference_editions(id),
   rules_score   SMALLINT NOT NULL CHECK (rules_score BETWEEN 0 AND 100),
-  semantic_score REAL,                                     -- NULL in Phase 1
+  semantic_score REAL,
   final_score   SMALLINT NOT NULL,
   rank          SMALLINT NOT NULL,
-  reasons       JSONB NOT NULL,  -- [{ "code": "sector_overlap", "label": "...", "weight": 20 }]
+  reasons       JSONB NOT NULL,
   status        TEXT NOT NULL DEFAULT 'active'
                 CHECK (status IN ('active','dismissed','intro_sent','expired')),
   computed_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -168,54 +184,53 @@ CREATE TABLE match_recommendations (
 CREATE INDEX idx_match_rec_user_rank ON match_recommendations (user_id, edition_id, rank)
   WHERE status = 'active';
 
--- Intro request (consent gate)
 CREATE TABLE intro_requests (
-  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  requester_id    UUID NOT NULL REFERENCES users(id),
-  recipient_id    UUID NOT NULL REFERENCES users(id),
+  id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  requester_id      UUID NOT NULL REFERENCES users(id),
+  recipient_id      UUID NOT NULL REFERENCES users(id),
   recommendation_id UUID REFERENCES match_recommendations(id),
-  message         TEXT CHECK (char_length(message) <= 500),
-  status          TEXT NOT NULL DEFAULT 'pending'
-                  CHECK (status IN ('pending','accepted','declined','expired')),
-  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
-  responded_at    TIMESTAMPTZ
+  message           TEXT CHECK (char_length(message) <= 500),
+  status            TEXT NOT NULL DEFAULT 'pending'
+                    CHECK (status IN ('pending','accepted','declined','expired')),
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+  responded_at      TIMESTAMPTZ
 );
 ```
 
-**Profile embedding (Phase 2)**
+**Phase 2 embedding:**
 
 ```sql
 ALTER TABLE profiles ADD COLUMN embedding vector(1536);
 CREATE INDEX ON profiles USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
 ```
 
-Embedding input text = concat(`role`, `sectors`, `seeking`, `offering`, `investment_thesis`, `bio_public`); model `text-embedding-3-small`; refresh on profile save (debounced job).
+Input: `concat(role, sectors, seeking, offering, investment_thesis, bio_public)` → `text-embedding-3-small`; refresh on profile save (debounced).
 
 ---
 
 ### 4.7 Jobs & APIs
 
-#### 4.7.1 Background jobs (Inngest)
+#### Background jobs (Inngest)
 
 | Job | Trigger | Action |
 |-----|---------|--------|
-| `matchmaking.batch` | Nightly 02:00 SAST + on `profile.updated` | Recompute top 50 per active user for current edition |
-| `matchmaking.expire` | Hourly | Set `status = expired` where `expires_at < now()` |
-| `embeddings.refresh` | `profile.updated` | Upsert pgvector embedding |
+| `matchmaking.batch` | Nightly 02:00 SAST + `profile.updated` | Top 50 per active user per edition |
+| `matchmaking.expire` | Hourly | `status = expired` where past `expires_at` |
+| `embeddings.refresh` | `profile.updated` | Upsert pgvector |
 
-Batch budget: &lt; 4 min per 500 users on 2 vCPU worker; parallelise by user shard.
+Batch budget: &lt; 4 min per 500 users (2 vCPU); shard by user ID.
 
-#### 4.7.2 REST / tRPC endpoints
+#### REST / tRPC
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/api/v1/recommendations` | Paginated list; query `?edition=2027` |
-| `POST` | `/api/v1/recommendations/:id/dismiss` | Reason optional enum |
-| `POST` | `/api/v1/intro-requests` | Body: `{ candidateId, message?, recommendationId? }` |
+| `GET` | `/api/v1/recommendations` | Paginated; `?edition=2027` |
+| `POST` | `/api/v1/recommendations/:id/dismiss` | Optional reason enum |
+| `POST` | `/api/v1/intro-requests` | `{ candidateId, message?, recommendationId? }` |
 | `GET` | `/api/v1/intro-requests/inbox` | Pending received |
 | `PATCH` | `/api/v1/intro-requests/:id` | `accept` \| `decline` |
 
-**Response shape (`RecommendationDTO`):**
+**`RecommendationDTO`:**
 
 ```typescript
 {
@@ -228,7 +243,9 @@ Batch budget: &lt; 4 min per 500 users on 2 vCPU worker; parallelise by user sha
 }
 ```
 
-Cache: Redis key `recs:{userId}:{editionId}` → JSON array, TTL 15 min; invalidate on dismiss or profile change.
+**Cache:** Redis `recs:{userId}:{editionId}` — TTL 15 min; invalidate on dismiss or profile change.
+
+**On accept:** Provision Stream channel `intro-{uuid}` within 5s (AC-4).
 
 ---
 
@@ -236,39 +253,38 @@ Cache: Redis key `recs:{userId}:{editionId}` → JSON array, TTL 15 min; invalid
 
 #### 4.8.1 Surfaces
 
-1. **Connect Home** — “Recommended for you” horizontal cards (top 5); badge with reason chip
-2. **Conference app tab** — “People to meet” before Day 1; refreshes nightly
-3. **Post-session prompt** — “Others interested in {session title}” (contextual subset)
-4. **Email digest** — Max 3 recommendations, weekly opt-in; deep link to profile
-5. **Push** — Only high-score (&gt;75) + mutual session overlap; max 1/day
-6. **Concierge chatbot** — “Who should I meet about X?” queries RAG + live filter on recommendations API
+| Surface | Content | Refresh |
+|---------|---------|---------|
+| **Connect Home** | Top 5 horizontal cards + reason chip | Nightly + on profile edit |
+| **Conference tab** | "People to meet" before Day 1 | Nightly during event week |
+| **Post-session prompt** | "Others interested in {session}" | Contextual subset |
+| **Email digest** | Max 3 recs, weekly opt-in | Scheduled |
+| **Push** | Score &gt; 75 + session overlap only | Max 1/day |
+| **Concierge chatbot** | "Who should I meet about X?" | RAG + live filter on API |
 
-#### 4.8.2 Interaction flows
+#### 4.8.2 Intro request flow
 
-**Intro request flow**
+1. Tap **Request introduction** → optional 500-char note → preview recipient view
+2. Recipient: in-app + email notification
+3. **Accept** → Stream channel + both notified
+4. **Decline** → dismiss rec; down-rank similar archetype 30 days
 
-1. User taps **Request introduction** on card
-2. Optional 500-char note; preview what recipient sees
-3. Recipient gets in-app + email notification
-4. On **accept**: create Stream Chat channel `intro-{uuid}`; both parties notified
-5. On **decline**: recommendation dismissed; similar archetype down-ranked 30 days
+**Dismiss reasons:** `not_relevant`, `already_know`, `wrong_timing`, `other` — feed negative signals.
 
-**Dismiss flow** — Reasons: `not_relevant`, `already_know`, `wrong_timing`, `other`; feeds negative signal.
+#### 4.8.3 Edge states
 
-#### 4.8.3 Empty / edge states
-
-- &lt; 5 matches: show “Complete your seeking/offering preferences” CTA
-- `intro_opt_in = false`: explain Counder’s consent model; no cards shown
-- Conference mode without ticket: network-only recommendations
+- &lt; 5 matches → CTA: complete seeking/offering preferences
+- `intro_opt_in = false` → explain consent model; no cards
+- No conference ticket → year-round network recs only
 
 ---
 
 ### 4.9 Admin & Quality
 
-- **Dashboard:** acceptance rate, dismiss reasons, score distribution, diversity metrics
-- **Manual overrides:** pin user A→B for VIP; global suppress
-- **A/B tests:** weight configs versioned in `match_weights` (`version`, `effective_from`)
-- **Quality bar:** if acceptance rate &lt; 15% for a weight version, alert #connect-team
+- Dashboard: acceptance rate, dismiss reasons, score distribution, diversity
+- Manual pin/suppress with audit trail
+- A/B weight versions in `match_weights` (`version`, `effective_from`)
+- Alert if acceptance &lt; 15% for a weight version
 
 ---
 
@@ -276,22 +292,35 @@ Cache: Redis key `recs:{userId}:{editionId}` → JSON array, TTL 15 min; invalid
 
 | ID | Criterion |
 |----|-----------|
-| AC-1 | Given investor with `seeking: ['sector_insight']` and sector `quantum`, expert in `quantum` ranks in top 10 |
-| AC-2 | Users with `intro_opt_in = false` never appear as candidates |
+| AC-1 | Investor seeking `sector_insight` + quantum sector → quantum expert in top 10 |
+| AC-2 | `intro_opt_in = false` users never appear as candidates |
 | AC-3 | Dismissed pair not re-shown for 30 days |
-| AC-4 | Accept intro creates chat channel within 5s |
-| AC-5 | GET recommendations p95 &lt; 120ms (cache hit) at 3k concurrent |
-| AC-6 | Each card shows ≥1 human-readable reason |
+| AC-4 | Accept intro → Stream channel within 5s |
+| AC-5 | GET recommendations p95 &lt; 120ms (cache hit) @ 3k concurrent |
+| AC-6 | Every card shows ≥1 human-readable reason |
 | AC-7 | Batch recomputes 500 users in &lt; 4 min |
 
 ---
 
-### 4.11 Open Questions
+### 4.11 Open Questions (for product sign-off)
 
-1. Should Mission Partners receive higher visibility weight? (Product)
-2. Cross-edition intro carry-over rules? (Default: expire after 90 days)
-3. Concierge approval queue for first-time requesters? (Recommended for v1 launch week)
+1. Higher visibility weight for Mission Partners?
+2. Cross-edition intro carry-over? *(Proposed: expire after 90 days)*
+3. Concierge approval queue for first-time requesters during launch week? *(Recommended: yes)*
 
 ---
 
-*End of §4 excerpt. Refer to §1 for `PublicProfileCard` schema and §3 for Stream channel provisioning.*
+### Assessment checklist (Part 2.2)
+
+| Criterion | ✓ |
+|-----------|---|
+| Algorithm strategy specified | §4.3 |
+| Signals & data inputs | §4.4 |
+| Surfacing recommendations | §4.8 |
+| Formatted as larger spec excerpt | Header + §4.0 cross-refs |
+| Actionable for implementation | §4.6–4.7, §4.10 |
+| Nuanced business connection examples | §4.1, §4.4.4 |
+
+---
+
+*Sibling sections (not in this excerpt): §1 `PublicProfileCard` schema, §2 session/booking models, §3 Stream channel provisioning. Architecture overview: [`architecture.md`](architecture.md).*

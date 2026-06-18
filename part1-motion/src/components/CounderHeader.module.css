@@ -84,9 +84,10 @@
 }
 
 .logoMark {
-  width: calc(28px - var(--scroll) * 2px);
+  width: calc(32px - var(--scroll) * 2px);
   height: auto;
   display: block;
+  flex-shrink: 0;
   transition: width 0.2s ease;
 }
 
