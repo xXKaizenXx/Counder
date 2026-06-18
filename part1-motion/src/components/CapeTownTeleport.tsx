@@ -1,0 +1,249 @@
+import { useCallback, useEffect, useLayoutEffect, useRef, type CSSProperties } from 'react'
+import gsap from 'gsap'
+import { CONFERENCE_VIDEO_SRC } from '../constants/media'
+import type { TeleportPhase } from '../types/teleport'
+import styles from './CapeTownTeleport.module.css'
+
+interface CapeTownTeleportProps {
+  phase: TeleportPhase
+  isTouch: boolean
+  canvasWrapRef: React.RefObject<HTMLDivElement | null>
+  sectionRef: React.RefObject<HTMLElement | null>
+  onConfirmTeleport: () => void
+  onWarpComplete: () => void
+  onClose: () => void
+  onCancelPrompt: () => void
+}
+
+export function CapeTownTeleport({
+  phase,
+  isTouch,
+  canvasWrapRef,
+  sectionRef,
+  onConfirmTeleport,
+  onWarpComplete,
+  onClose,
+  onCancelPrompt,
+}: CapeTownTeleportProps) {
+  const overlayRef = useRef<HTMLDivElement>(null)
+  const portalRef = useRef<HTMLDivElement>(null)
+  const tunnelRef = useRef<HTMLDivElement>(null)
+  const flashRef = useRef<HTMLDivElement>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const promptRef = useRef<HTMLDivElement>(null)
+  const warpPlayed = useRef(false)
+
+  useEffect(() => {
+    if (phase !== 'prompt') return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCancelPrompt()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [phase, onCancelPrompt])
+
+  useEffect(() => {
+    if (phase !== 'video') return
+    const video = videoRef.current
+    if (!video) return
+
+    document.body.style.overflow = 'hidden'
+    const play = async () => {
+      try {
+        await video.play()
+      } catch {
+        /* autoplay may need user gesture — already from double-click */
+      }
+    }
+    void play()
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => {
+      document.body.style.overflow = ''
+      window.removeEventListener('keydown', onKey)
+      video.pause()
+    }
+  }, [phase, onClose])
+
+  useLayoutEffect(() => {
+    if (phase !== 'prompt' || !promptRef.current) return
+
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        promptRef.current,
+        { opacity: 0, y: 24, scale: 0.96 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.65, ease: 'power3.out' },
+      )
+      const ring = promptRef.current?.querySelector(`.${styles.promptRing}`)
+      if (ring) {
+        gsap.to(ring, {
+          scale: 1.08,
+          opacity: 0.5,
+          duration: 1.6,
+          repeat: -1,
+          yoyo: true,
+          ease: 'sine.inOut',
+        })
+      }
+    }, promptRef)
+
+    return () => ctx.revert()
+  }, [phase])
+
+  const runWarp = useCallback(() => {
+    const overlay = overlayRef.current
+    const portal = portalRef.current
+    const tunnel = tunnelRef.current
+    const flash = flashRef.current
+    const canvas = canvasWrapRef.current
+    const section = sectionRef.current
+    if (!overlay || !portal || !tunnel || !flash) return
+
+    warpPlayed.current = true
+    document.body.style.overflow = 'hidden'
+
+    const ctx = gsap.context(() => {
+      gsap.set(overlay, { opacity: 1, pointerEvents: 'auto' })
+      gsap.set(portal, { scale: 0, opacity: 1 })
+      gsap.set(tunnel, { opacity: 0, rotation: 0 })
+      gsap.set(flash, { opacity: 0 })
+
+      const tl = gsap.timeline({
+        onComplete: onWarpComplete,
+      })
+
+      tl.to(tunnel, { opacity: 1, duration: 0.25, ease: 'power2.out' }, 0)
+        .to(
+          tunnel,
+          { rotation: 180, duration: 2.2, ease: 'power2.in' },
+          0,
+        )
+        .to(
+          canvas,
+          {
+            scale: 2.8,
+            filter: 'blur(12px) brightness(1.4)',
+            duration: 2,
+            ease: 'power3.in',
+          },
+          0.1,
+        )
+        .to(
+          section,
+          {
+            backgroundColor: '#000000',
+            duration: 1.2,
+            ease: 'power2.in',
+          },
+          0.4,
+        )
+        .to(portal, { scale: 28, duration: 1.35, ease: 'power4.in' }, 0.55)
+        .to(
+          overlay.querySelectorAll(`.${styles.warpLine}`),
+          {
+            opacity: 1,
+            scaleY: 1.4,
+            duration: 0.8,
+            stagger: 0.04,
+            ease: 'power2.in',
+          },
+          0.7,
+        )
+        .to(flash, { opacity: 1, duration: 0.12, ease: 'power2.in' }, 1.75)
+        .to(flash, { opacity: 0, duration: 0.35, ease: 'power2.out' }, 1.9)
+    }, overlay)
+
+    return () => ctx.revert()
+  }, [canvasWrapRef, sectionRef, onWarpComplete])
+
+  useLayoutEffect(() => {
+    if (phase !== 'warp' || warpPlayed.current) return
+    const cleanup = runWarp()
+    return cleanup
+  }, [phase, runWarp])
+
+  useEffect(() => {
+    if (phase === 'idle') {
+      warpPlayed.current = false
+      document.body.style.overflow = ''
+      const canvas = canvasWrapRef.current
+      const section = sectionRef.current
+      if (canvas) gsap.set(canvas, { clearProps: 'scale,filter' })
+      if (section) gsap.set(section, { clearProps: 'backgroundColor' })
+    }
+  }, [phase, canvasWrapRef, sectionRef])
+
+  if (phase === 'idle') return null
+
+  return (
+    <>
+      {phase === 'prompt' && (
+        <div className={styles.promptOverlay} role="dialog" aria-modal="true" aria-labelledby="cape-town-prompt">
+          <div ref={promptRef} className={styles.promptCard}>
+            <div className={styles.promptRing} aria-hidden="true" />
+            <p className={styles.promptEyebrow}>Cape Town · 2027</p>
+            <h3 id="cape-town-prompt" className={styles.promptTitle}>
+              Ready to explore
+              <br />
+              Counder Cape Town?
+            </h3>
+            <p className={styles.promptHint}>
+              {isTouch ? 'Tap Cape Town again to enter' : 'Click Cape Town again to enter'}
+            </p>
+            <button type="button" className={styles.promptEnter} onClick={onConfirmTeleport}>
+              Enter Cape Town
+            </button>
+            <button type="button" className={styles.promptDismiss} onClick={onCancelPrompt}>
+              Not yet
+            </button>
+          </div>
+        </div>
+      )}
+
+      {(phase === 'warp' || phase === 'video') && (
+        <div
+          ref={overlayRef}
+          className={`${styles.warpOverlay} ${phase === 'video' ? styles.warpOverlayDone : ''}`}
+          aria-hidden={phase === 'video'}
+        >
+          <div ref={tunnelRef} className={styles.tunnel} aria-hidden="true">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <span key={i} className={styles.tunnelRing} style={{ '--i': i } as CSSProperties} />
+            ))}
+          </div>
+          {Array.from({ length: 12 }).map((_, i) => (
+            <span key={i} className={styles.warpLine} style={{ '--i': i } as CSSProperties} />
+          ))}
+          <div ref={portalRef} className={styles.portal} aria-hidden="true" />
+          <div ref={flashRef} className={styles.flash} aria-hidden="true" />
+        </div>
+      )}
+
+      {phase === 'video' && (
+        <div className={styles.videoStage} role="dialog" aria-modal="true" aria-label="Counder Conference Cape Town">
+          <button type="button" className={styles.videoClose} onClick={onClose} aria-label="Close video">
+            ✕
+          </button>
+          <div className={styles.videoFrame}>
+            <video
+              ref={videoRef}
+              className={styles.video}
+              src={CONFERENCE_VIDEO_SRC}
+              playsInline
+              controls
+              preload="auto"
+            />
+            <div className={styles.videoScrim} aria-hidden="true" />
+            <div className={styles.videoCaption}>
+              <p className={styles.videoEyebrow}>Counder Conference · Cape Town</p>
+              <p className={styles.videoTitle}>You&apos;ve arrived.</p>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}

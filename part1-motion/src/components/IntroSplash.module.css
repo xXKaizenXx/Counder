@@ -1,0 +1,95 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  pointer-events: none;
+}
+
+.panel {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--cream);
+  overflow: hidden;
+  will-change: transform;
+}
+
+.shine {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 28vw;
+  max-width: 220px;
+  background: linear-gradient(
+    105deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.55) 48%,
+    transparent 100%
+  );
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+.center {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+}
+
+.glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(52vw, 320px);
+  height: min(52vw, 320px);
+  transform: translate(-50%, -58%);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(0, 0, 0, 0.09) 0%,
+    rgba(0, 0, 0, 0.04) 38%,
+    transparent 72%
+  );
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+.logoWrap {
+  position: relative;
+  z-index: 1;
+  color: var(--black);
+  will-change: transform, opacity;
+}
+
+.logo {
+  width: clamp(72px, 14vw, 104px);
+  height: auto;
+  display: block;
+}
+
+.wordmark {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  font-size: clamp(1.1rem, 2.4vw, 1.35rem);
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--black);
+  will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel,
+  .shine,
+  .logoWrap,
+  .wordmark,
+  .glow {
+    will-change: auto;
+  }
+}

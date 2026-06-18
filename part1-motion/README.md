@@ -1,6 +1,6 @@
 # Part 1 — Interactive Connection Graph
 
-Full-screen motion section: an abstract 3D neural network aligned with Counder's "Network for Collective Understanding" theme.
+Full-screen motion section embedded in a **mock counder.com homepage** — header, statement dwell, network section, Conference 2027 reveal, footer.
 
 ## Run locally
 
@@ -11,11 +11,10 @@ npm run dev
 
 ## Interaction
 
-- **Hover** a node (desktop) — floating 3D label appears, camera eases in, edges brighten
+- **Hover Cape Town** (desktop) — zoom + label; other cities show small labels only
 - **Click / tap** a node — light pulses travel to the Cape Town hub; ripple + bloom on convergence
-- **Conference mode** toggle (top-right) — dark variant matching the conference card section
-- **Mobile** — tap feedback with haptic vibration, touch ripple rings, inset flash, centred tooltip
-- Auto-demo pulse on desktop ~2.4s after load
+- **Drag** the canvas — rotate the network (desktop + mobile)
+- **Conference mode** toggle — dark variant matching the conference reveal below
 
 ## Build
 
@@ -26,6 +25,8 @@ npm run preview
 
 ## Files
 
+- `CounderHeader.tsx` — Mock site header (nav, logo, Join)
+- `MockHomeSlice.tsx` — Statement + Conference reveal + footer chrome
 - `PerspectivesConverge.tsx` — Section layout, copy, GSAP animations
 - `NetworkCanvas.tsx` — R3F canvas + GSAP camera rig
 - `NetworkScene.tsx` — Graph orchestration, interaction state

@@ -51,6 +51,7 @@ interface NetworkSceneProps {
   theme: ThemeMode
   isTouch: boolean
   onNodeFocus?: (node: FocusedNodeInfo | null) => void
+  onHubClick?: () => void
   hubZoom: number
 }
 
@@ -59,6 +60,7 @@ export function NetworkScene({
   theme,
   isTouch,
   onNodeFocus,
+  onHubClick,
   hubZoom,
 }: NetworkSceneProps) {
   const graph = useMemo(() => buildNetworkGraph(), [])
@@ -92,6 +94,16 @@ export function NetworkScene({
   }
 
   const triggerPulse = (id: string) => {
+    if (id === 'hub') {
+      onHubClick?.()
+      setActiveId(id)
+      setRippleKey((k) => k + 1)
+      notifyFocus(id)
+      applyHubCamera(id)
+      window.setTimeout(() => setActiveId(null), 3200)
+      return
+    }
+
     if (reducedMotion) return
     setActiveId(id)
     setRippleKey((k) => k + 1)

@@ -1,6 +1,6 @@
 # Counder Full Stack Engineer — Take-Home Assessment
 
-**Candidate:** Sachin  
+**Candidate:** Sachin
 **Submitted to:** robin@counder.com
 
 This repository contains all deliverables for the Counder take-home assessment: a full-screen motion section, a technical architecture document, and a matchmaking implementation specification.
@@ -17,7 +17,7 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173) — the **Perspectives Converge** section is full-screen at the top.
+Open [http://localhost:5173](http://localhost:5173) — the **motion section loads first**. Use **View homepage integration** at the bottom to see it embedded in a mock counder.com page.
 
 **Production build:**
 
@@ -44,7 +44,7 @@ npm run preview
 
 ### Concept: *Interactive Connection Graph*
 
-An abstract **3D neural network** — nodes represent founders, investors, experts, and operators floating organically in space. On hover or tap, **light pulses** trace paths through the graph and converge on a central **Cape Town Conference** hub with a glowing ripple effect. GSAP drives smooth camera transitions; Three.js + R3F keeps it performant.
+An abstract **3D neural network** — nodes represent global cities streaming perspective toward Cape Town. On interaction, **light pulses** trace paths through the graph and converge on the central **2027 Conference** hub.
 
 ### Why this fits counder.com
 
@@ -69,7 +69,7 @@ An abstract **3D neural network** — nodes represent founders, investors, exper
 
 ### Placement on counder.com
 
-Designed to slot **between the Network/Conference/Friends telescope section and the Conference 2027 card reveal** — a narrative bridge from "global network" to "gathering in Cape Town."
+Delivered as a **mock integration page** — fixed Counder header (Manrope, logo, nav, Join CTA), a statement section above, the interactive network section, and a Conference 2027 reveal below. This mirrors where the section would sit on the live homepage: between the global network narrative and the annual Cape Town gathering.
 
 ---
 

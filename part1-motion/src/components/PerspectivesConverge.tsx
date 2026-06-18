@@ -1,8 +1,10 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { CapeTownTeleport } from './CapeTownTeleport'
 import type { FocusedNodeInfo } from './NetworkScene'
 import type { ThemeMode } from '../utils/sceneTheme'
+import type { TeleportPhase } from '../types/teleport'
 import { NETWORK_CITIES } from '../utils/networkGraph'
 import styles from './PerspectivesConverge.module.css'
 
@@ -43,7 +45,7 @@ function useIsTouchDevice() {
   return isTouch
 }
 
-export function PerspectivesConverge() {
+export function PerspectivesConverge({ variant = 'standalone' }: { variant?: 'standalone' | 'embedded' }) {
   const sectionRef = useRef<HTMLElement>(null)
   const eyebrowRef = useRef<HTMLParagraphElement>(null)
   const titleRef = useRef<HTMLHeadingElement>(null)
@@ -51,14 +53,54 @@ export function PerspectivesConverge() {
   const rolesRef = useRef<HTMLUListElement>(null)
   const hintRef = useRef<HTMLParagraphElement>(null)
   const logoRef = useRef<HTMLDivElement>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
+  const canvasWrapRef = useRef<HTMLDivElement>(null)
   const [theme, setTheme] = useState<ThemeMode>('light')
   const [touchFlash, setTouchFlash] = useState(false)
+  const [teleportPhase, setTeleportPhase] = useState<TeleportPhase>('idle')
+  const promptTimerRef = useRef<number | undefined>(undefined)
   const isTouch = useIsTouchDevice()
   const [reducedMotion] = useState(
     () =>
       typeof window !== 'undefined' &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches,
   )
+
+  const cancelPrompt = useCallback(() => {
+    if (promptTimerRef.current) window.clearTimeout(promptTimerRef.current)
+    setTeleportPhase('idle')
+  }, [])
+
+  const handleConfirmTeleport = useCallback(() => {
+    if (promptTimerRef.current) window.clearTimeout(promptTimerRef.current)
+    if (reducedMotion) {
+      setTeleportPhase('video')
+    } else {
+      setTeleportPhase('warp')
+    }
+  }, [reducedMotion])
+
+  const handleHubClick = useCallback(() => {
+    if (teleportPhase === 'warp' || teleportPhase === 'video') return
+
+    if (teleportPhase === 'idle') {
+      setTeleportPhase('prompt')
+      promptTimerRef.current = window.setTimeout(cancelPrompt, 12000)
+      return
+    }
+
+    if (teleportPhase === 'prompt') {
+      handleConfirmTeleport()
+    }
+  }, [teleportPhase, cancelPrompt, handleConfirmTeleport])
+
+  const handleWarpComplete = useCallback(() => {
+    setTeleportPhase('video')
+  }, [])
+
+  const handleCloseVideo = useCallback(() => {
+    setTeleportPhase('idle')
+  }, [])
 
   const handleNodeFocus = (node: FocusedNodeInfo | null) => {
     if (isTouch && node) {
@@ -76,13 +118,27 @@ export function PerspectivesConverge() {
     if (!section || reducedMotion) return
 
     const ctx = gsap.context(() => {
-      gsap.from([eyebrowRef.current, logoRef.current], {
+      const canvasWrap = section.querySelector(`.${styles.canvasWrap}`)
+      const isEmbedded = variant === 'embedded'
+
+      const embeddedTrigger = isEmbedded
+        ? {
+            scrollTrigger: {
+              trigger: section,
+              start: 'top 72%',
+              toggleActions: 'play none none reverse',
+            },
+          }
+        : {}
+
+      gsap.from([eyebrowRef.current, logoRef.current].filter(Boolean), {
         opacity: 0,
         y: 24,
         duration: 1.1,
         stagger: 0.12,
         ease: 'power3.out',
-        delay: 0.2,
+        delay: isEmbedded ? 0 : 0.2,
+        ...embeddedTrigger,
       })
 
       gsap.from(titleRef.current, {
@@ -90,7 +146,8 @@ export function PerspectivesConverge() {
         y: 40,
         duration: 1.2,
         ease: 'power3.out',
-        delay: 0.35,
+        delay: isEmbedded ? 0.08 : 0.35,
+        ...embeddedTrigger,
       })
 
       gsap.from(bodyRef.current, {
@@ -98,7 +155,8 @@ export function PerspectivesConverge() {
         y: 28,
         duration: 1,
         ease: 'power3.out',
-        delay: 0.55,
+        delay: isEmbedded ? 0.16 : 0.55,
+        ...embeddedTrigger,
       })
 
       if (rolesRef.current) {
@@ -108,38 +166,80 @@ export function PerspectivesConverge() {
           duration: 0.7,
           stagger: 0.05,
           ease: 'power2.out',
-          delay: 0.75,
+          delay: isEmbedded ? 0.24 : 0.75,
+          ...embeddedTrigger,
         })
       }
 
       gsap.from(hintRef.current, {
         opacity: 0,
         duration: 0.8,
-        delay: 1.1,
+        delay: isEmbedded ? 0.32 : 1.1,
+        ...(isEmbedded
+          ? {
+              scrollTrigger: {
+                trigger: section,
+                start: 'top 68%',
+                toggleActions: 'play none none reverse',
+              },
+            }
+          : {}),
       })
 
-      gsap.to(logoRef.current, {
+      const logoPulse = gsap.to(logoRef.current, {
         scale: 1.04,
         duration: 2.4,
         repeat: -1,
         yoyo: true,
         ease: 'sine.inOut',
+        paused: isEmbedded,
       })
 
-      gsap.to(section.querySelector(`.${styles.canvasWrap}`), {
-        y: -40,
-        ease: 'none',
-        scrollTrigger: {
+      if (isEmbedded && logoPulse) {
+        ScrollTrigger.create({
           trigger: section,
-          start: 'top bottom',
-          end: 'bottom top',
-          scrub: 1.2,
-        },
-      })
+          start: 'top 75%',
+          onEnter: () => logoPulse.play(),
+          onLeaveBack: () => logoPulse.pause(),
+        })
+      }
+
+      if (isEmbedded && contentRef.current) {
+        gsap.from(contentRef.current, {
+          opacity: 0.88,
+          y: 32,
+          duration: 1.25,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: section,
+            start: 'top 78%',
+            end: 'top 35%',
+            scrub: 0.65,
+          },
+        })
+      }
+
+      if (canvasWrap) {
+        gsap.to(canvasWrap, {
+          y: isEmbedded ? -56 : -40,
+          ease: 'none',
+          scrollTrigger: {
+            trigger: section,
+            start: 'top bottom',
+            end: 'bottom top',
+            scrub: 1.2,
+          },
+        })
+      }
+
+      if (isEmbedded) {
+        const refresh = () => ScrollTrigger.refresh()
+        window.setTimeout(refresh, 1700)
+      }
     }, section)
 
     return () => ctx.revert()
-  }, [reducedMotion])
+  }, [reducedMotion, variant])
 
   const sectionClass = [
     styles.section,
@@ -155,16 +255,26 @@ export function PerspectivesConverge() {
     .filter(Boolean)
     .join(' ')
 
+  const interactHint =
+    teleportPhase === 'prompt'
+      ? isTouch
+        ? 'Tap Cape Town again to enter'
+        : 'Click Cape Town again to enter'
+      : isTouch
+        ? 'Drag to rotate · Tap Cape Town to explore'
+        : 'Drag to rotate · Click Cape Town to explore'
+
   return (
     <section
       ref={sectionRef}
+      id={variant === 'embedded' ? 'network' : undefined}
       className={sectionClass}
       aria-label="Interactive network of collective understanding"
       data-theme={theme}
     >
       <button
         type="button"
-        className={styles.themeToggle}
+        className={`${styles.themeToggle} ${variant === 'embedded' ? styles.themeToggleEmbedded : styles.themeToggleStandalone}`}
         onClick={toggleTheme}
         aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
       >
@@ -176,25 +286,24 @@ export function PerspectivesConverge() {
         </span>
       </button>
 
-      <div className={canvasClass}>
+      <div ref={canvasWrapRef} className={canvasClass}>
         <Suspense fallback={<div className={styles.canvasFallback} aria-hidden="true" />}>
           <NetworkCanvas
             reducedMotion={reducedMotion}
             theme={theme}
             isTouch={isTouch}
             onNodeFocus={handleNodeFocus}
+            onHubClick={handleHubClick}
           />
         </Suspense>
         <div className={styles.canvasVignette} aria-hidden="true" />
 
         <p ref={hintRef} className={styles.interactHint}>
-          {isTouch
-            ? 'Drag to rotate · Tap a node to connect'
-            : 'Drag to rotate · Hover Cape Town to zoom'}
+          {interactHint}
         </p>
       </div>
 
-      <div className={styles.content}>
+      <div ref={contentRef} className={styles.content}>
         <div ref={logoRef} className={styles.logoPulse}>
           <CounderRings className={styles.logo} />
         </div>
@@ -226,6 +335,17 @@ export function PerspectivesConverge() {
       <div className={styles.scrollHint} aria-hidden="true">
         <span className={styles.scrollLine} />
       </div>
+
+      <CapeTownTeleport
+        phase={teleportPhase}
+        isTouch={isTouch}
+        canvasWrapRef={canvasWrapRef}
+        sectionRef={sectionRef}
+        onConfirmTeleport={handleConfirmTeleport}
+        onWarpComplete={handleWarpComplete}
+        onClose={handleCloseVideo}
+        onCancelPrompt={cancelPrompt}
+      />
     </section>
   )
 }

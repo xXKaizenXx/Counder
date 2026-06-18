@@ -14,11 +14,13 @@ function CameraController({
   theme,
   isTouch,
   onNodeFocus,
+  onHubClick,
 }: {
   reducedMotion: boolean
   theme: ThemeMode
   isTouch: boolean
   onNodeFocus?: (node: FocusedNodeInfo | null) => void
+  onHubClick?: () => void
 }) {
   const { camera, gl } = useThree()
   const hubFocused = useRef(false)
@@ -77,6 +79,7 @@ function CameraController({
         theme={theme}
         isTouch={isTouch}
         onNodeFocus={onNodeFocus}
+        onHubClick={onHubClick}
         hubZoom={HUB_ZOOM}
       />
     </FocusContext.Provider>
@@ -88,6 +91,7 @@ interface NetworkCanvasProps {
   theme: ThemeMode
   isTouch: boolean
   onNodeFocus?: (node: FocusedNodeInfo | null) => void
+  onHubClick?: () => void
 }
 
 export function NetworkCanvas({
@@ -95,6 +99,7 @@ export function NetworkCanvas({
   theme,
   isTouch,
   onNodeFocus,
+  onHubClick,
 }: NetworkCanvasProps) {
   return (
     <Canvas
@@ -107,6 +112,7 @@ export function NetworkCanvas({
         theme={theme}
         isTouch={isTouch}
         onNodeFocus={onNodeFocus}
+        onHubClick={onHubClick}
       />
     </Canvas>
   )

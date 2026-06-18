@@ -84,7 +84,6 @@
 
 .themeToggle {
   position: absolute;
-  top: clamp(24px, 4vh, 40px);
   right: var(--side-padding);
   z-index: 10;
   display: inline-flex;
@@ -108,6 +107,14 @@
     transform 0.2s ease;
 }
 
+.themeToggleStandalone {
+  top: clamp(24px, 4vh, 40px);
+}
+
+.themeToggleEmbedded {
+  top: 76px;
+}
+
 .themeToggle:hover {
   background: rgba(255, 255, 255, 0.92);
   transform: translateY(-1px);
@@ -129,6 +136,8 @@
   margin-left: -4%;
   border-radius: 12px;
   transition: box-shadow 0.35s ease;
+  transform-origin: center center;
+  will-change: transform, filter;
 }
 
 .canvasTouchFlash {
