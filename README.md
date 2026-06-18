@@ -13,7 +13,7 @@ This submission delivers three artefacts that mirror how work happens at Counder
 
 | Part | What you get | Why it matters |
 |------|----------------|----------------|
-| **Part 1** | A full-screen **Interactive Connection Graph** with a **Cape Town teleport adventure**, plus a **mock counder.com homepage** showing real placement | Motion that enhances the story — perspectives converging on Cape Town — not decoration for its own sake |
+| **Part 1** | A full-screen **Interactive Connection Graph** with **dual layouts** (scattered neural network ↔ Counder logo spheres), a **Cape Town teleport adventure**, plus a **mock counder.com homepage** showing real placement | Motion that enhances the story — perspectives converging on Cape Town — not decoration for its own sake |
 | **Part 2.1** | A co-founder-ready **technical architecture** for Counder Connect | Pragmatic monolith, clear build-vs-buy, 3k concurrent path, security called out |
 | **Part 2.2** | An **implementation spec** for matchmaking & connection recommendations | Actionable enough for a coding agent; consent-first for an invite-only network |
 
@@ -28,11 +28,12 @@ Start on the **live URL** (or `npm run dev` locally — see [Quick start](#quick
 ### Path A — Section only (assessment core)
 
 1. **Intro splash** — Counder logo reveal (~1.5s; skipped if `prefers-reduced-motion`).
-2. **Interactive graph** — Drag to rotate. Hover cities (desktop) or tap (mobile).
-3. **Click any node** — Light pulses travel toward the **Cape Town hub**.
-4. **Click Cape Town** — Confirmation prompt appears.
-5. **Enter Cape Town** — Warp transition (light or dark), then **conference atmosphere video**.
-6. Toggle **Conference mode** (top-right) and repeat — dark warp uses tunnel + portal + flash handoff.
+2. **Interactive graph** — Drag to rotate. Hover cities (desktop) or tap (mobile). Starts as a **scattered neural network** with pulses streaming toward Cape Town at the centre.
+3. **Reconstitute** (top-right) — Watch nodes reorganise into the **Counder mark**: two tangent wireframe spheres with cities on each surface and Cape Town where they meet. **Scatter** returns to the neural layout.
+4. **Click any node** — Light pulses travel toward the **Cape Town hub** (path follows the active layout).
+5. **Click Cape Town** — Confirmation prompt appears.
+6. **Enter Cape Town** — Warp transition (light or dark), then **conference atmosphere video**.
+7. Toggle **Conference mode** (top-right) and repeat — dark warp uses tunnel + portal + flash handoff.
 
 ### Path B — Homepage integration (placement story)
 
@@ -44,6 +45,7 @@ Start on the **live URL** (or `npm run dev` locally — see [Quick start](#quick
 ### What to notice
 
 - Palette, typography, and tone match [counder.com](https://counder.com) (cream `#f5f3ef`, Manrope, DM Mono).
+- **Dual graph layouts** — neural network by default; one-click morph into the brand mark (and back).
 - Motion is restrained and editorial — it supports “collective understanding,” not spectacle.
 - `prefers-reduced-motion` is respected throughout.
 
@@ -58,9 +60,9 @@ Start on the **live URL** (or `npm run dev` locally — see [Quick start](#quick
 | Full-screen, responsive motion section | `PerspectivesConverge` — two-column desktop, stacked mobile, `min-height: 100dvh` |
 | Feels at home on counder.com | Design tokens from live site; mock header, statement, conference reveal in integration view |
 | Best-suited animation tech | React Three Fiber + Three.js (graph), GSAP (choreography, scroll), CSS modules |
-| Motion enhances the story | Global cities stream toward Cape Town; teleport completes the “annual gathering” narrative |
+| Motion enhances the story | Global cities stream toward Cape Town; **Reconstitute** reveals the logo-shaped convergence; teleport completes the “annual gathering” narrative |
 | Strongest presentation | Hosted URL + repo + this README as reviewer guide |
-| Creativity beyond the brief | **Cape Town teleport adventure**, mock homepage integration, intro splash, conference mode |
+| Creativity beyond the brief | **Dual-layout graph morph**, **Cape Town teleport adventure**, mock homepage integration, intro splash, conference mode |
 
 ### Part 2.1 — Technical architecture
 
@@ -125,7 +127,14 @@ npm run preview
 
 ### Concept: *Perspectives Converge*
 
-An abstract **logo-shaped dual-sphere network** — two sleek glass globes (large left, smaller bottom-right) tangent where they meet. **Global cities** sit on each sphere's surface; **light pulses** travel great-circle arcs toward **Cape Town** at the tangency point.
+Two complementary graph layouts, toggled with **Reconstitute** / **Scatter** (top-right):
+
+| Layout | What you see | Story beat |
+|--------|----------------|------------|
+| **Neural** (default) | ~28 nodes scattered in 3D space; k-nearest-neighbour edges; Cape Town at the centre | A living global network — many perspectives, loosely connected |
+| **Logo** | Nodes glide onto **two tangent wireframe spheres** (Counder mark); great-circle arcs on each sphere; Cape Town at the tangency point | The network resolves into the brand — perspectives converging where the circles meet |
+
+The morph is animated (~1.85s, GSAP `power3.inOut`): node positions, edge topology, and wireframe globes crossfade. `prefers-reduced-motion` snaps instantly.
 
 ### Cape Town teleport adventure
 
@@ -150,8 +159,8 @@ Clicking the Cape Town hub opens a **three-act micro-journey**:
 
 | Tool | Role |
 |------|------|
-| **React Three Fiber + Three.js** | 3D graph, pulse particles, hub ripples, bloom |
-| **GSAP + ScrollTrigger** | Text entrance, scroll parallax, pinned statement, integration-page choreography |
+| **React Three Fiber + Three.js** | 3D graph, dual-layout morph, pulse particles, hub ripples, bloom |
+| **GSAP + ScrollTrigger** | Layout morph, text entrance, scroll parallax, pinned statement, integration-page choreography |
 | **Vite + React 19** | Fast dev/build; static deploy to Vercel |
 
 ### Responsive & accessible
@@ -197,11 +206,11 @@ Full spec: [`docs/matchmaking-spec.md`](docs/matchmaking-spec.md).
 Built with **Cursor** (AI-assisted IDE) and Claude for:
 
 - Analysing counder.com HTML/CSS for design tokens and placement
-- Implementing Three.js graph geometry, GSAP choreography, and scroll integration
+- Implementing Three.js graph geometry, dual-layout morph, GSAP choreography, and scroll integration
 - Drafting architecture trade-offs and matchmaking spec structure
 - Iterative performance work on the embedded teleport flow
 
-**Human judgement applied to:** creative direction (graph vs globe, teleport narrative), technology choices, brand tone, scoping (monolith vs services, build vs buy), and every decision about when motion serves vs distracts.
+**Human judgement applied to:** creative direction (neural vs logo layouts, morph toggle, teleport narrative), technology choices, brand tone, scoping (monolith vs services, build vs buy), and every decision about when motion serves vs distracts.
 
 ---
 
@@ -215,7 +224,7 @@ counder_assessment/
 │   ├── src/
 │   │   ├── components/            ← Network scene, teleport, mock homepage
 │   │   ├── hooks/                 ← Integration scroll, scroll lock, header
-│   │   └── utils/                 ← Graph layout, canvas snapshot, themes
+│   │   └── utils/                 ← Dual graph layouts, canvas snapshot, themes
 │   └── README.md                  ← Part 1 technical deep-dive
 └── docs/
     ├── architecture.md            ← Part 2.1 (≤2 pages)

@@ -16,7 +16,7 @@ Counder Connect is the operational layer behind Counder’s invite-only network:
 
 **Recommendation:** A **modular monolith** on **Next.js 15 (App Router)** with **PostgreSQL**, **Redis**, and **managed services** for auth, email, chat, push, and AI. Deploy on **Vercel + AWS (af-south-1)** with EU data residency for PII where required.
 
-**Product alignment:** Public counder.com tells a story of perspectives converging (see Part 1 motion section). Connect is where that story becomes **durable** — curated intros, not open social graph noise.
+**Product alignment:** Public counder.com tells a story of perspectives converging (see Part 1 motion section — neural network that morphs into the Counder logo on demand). Connect is where that story becomes **durable** — curated intros, not open social graph noise.
 
 ---
 
