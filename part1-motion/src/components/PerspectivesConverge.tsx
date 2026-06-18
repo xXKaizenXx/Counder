@@ -52,7 +52,7 @@ export function PerspectivesConverge({ variant = 'standalone' }: { variant?: 'st
   const titleRef = useRef<HTMLHeadingElement>(null)
   const bodyRef = useRef<HTMLParagraphElement>(null)
   const rolesRef = useRef<HTMLUListElement>(null)
-  const hintRef = useRef<HTMLParagraphElement>(null)
+  const hintRef = useRef<HTMLUListElement>(null)
   const logoRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const canvasWrapRef = useRef<HTMLDivElement>(null)
@@ -308,14 +308,18 @@ export function PerspectivesConverge({ variant = 'standalone' }: { variant?: 'st
     .filter(Boolean)
     .join(' ')
 
-  const interactHint =
+  const interactHintItems =
     teleportPhase === 'prompt'
-      ? isTouch
-        ? 'Tap Cape Town again to enter'
-        : 'Click Cape Town again to enter'
+      ? null
       : isTouch
-        ? 'Drag to rotate · Tap Cape Town · Reconstitute for logo'
-        : 'Drag to rotate · Click Cape Town · Reconstitute to form the logo'
+        ? ['Drag to rotate', 'Tap Cape Town', '◎ reconstitute']
+        : ['Drag to rotate', 'Click Cape Town', 'Reconstitute for logo']
+
+  const interactHintPrompt = teleportPhase === 'prompt'
+    ? isTouch
+      ? 'Tap Cape Town again to enter'
+      : 'Click Cape Town again to enter'
+    : null
 
   return (
     <section
@@ -377,9 +381,26 @@ export function PerspectivesConverge({ variant = 'standalone' }: { variant?: 'st
         </Suspense>
         <div className={styles.canvasVignette} aria-hidden="true" />
 
-        <p ref={hintRef} className={styles.interactHint}>
-          {interactHint}
-        </p>
+        <ul
+          ref={hintRef}
+          className={styles.interactHint}
+          role="note"
+          aria-label={
+            interactHintPrompt ??
+            interactHintItems?.join('. ') ??
+            undefined
+          }
+        >
+          {interactHintPrompt ? (
+            <li className={styles.interactHintItem}>{interactHintPrompt}</li>
+          ) : (
+            interactHintItems?.map((item) => (
+              <li key={item} className={styles.interactHintItem}>
+                {item}
+              </li>
+            ))
+          )}
+        </ul>
       </div>
 
       <div ref={contentRef} className={styles.content}>
