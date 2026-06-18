@@ -1,0 +1,56 @@
+.label {
+  font-family: var(--font-mono, 'DM Mono', monospace);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 3px 6px;
+  border-radius: 3px;
+  border: 1px solid;
+  white-space: nowrap;
+  line-height: 1.3;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  opacity: 0.88;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  animation: labelFadeIn 0.2s ease-out forwards;
+}
+
+.labelHub {
+  font-size: 14px;
+  padding: 5px 10px;
+  gap: 3px;
+  letter-spacing: 0.06em;
+}
+
+.labelCity {
+  line-height: 1.2;
+}
+
+.labelSub {
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  opacity: 0.6;
+  line-height: 1.2;
+}
+
+@keyframes labelFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 0.88;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .label {
+    animation: none;
+    opacity: 0.88;
+  }
+}

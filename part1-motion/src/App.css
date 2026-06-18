@@ -1,0 +1,31 @@
+.context-block {
+  min-height: 60vh;
+  padding: 80px var(--side-padding) 120px;
+  background: var(--white);
+  border-top: 1px solid #e8e8e8;
+}
+
+.context-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gray-muted);
+  margin: 0 0 16px;
+}
+
+.context-block h3 {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  margin: 0 0 16px;
+  max-width: 28ch;
+}
+
+.context-block p {
+  color: var(--gray-body);
+  line-height: 1.6;
+  max-width: 52ch;
+  margin: 0;
+}
