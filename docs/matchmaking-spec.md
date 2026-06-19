@@ -73,12 +73,12 @@ Recommendations must feel **curated, not spammy** — aligned with Counder’s i
 
 ```
 ┌──────────────┐    ┌─────────────┐    ┌──────────────┐    ┌─────────────┐
-│ Candidate    │───▶│ Hard filters │───▶│ Score (rules)│───▶│ Re-rank     │
-│ generation   │    │ (eligibility)│    │ 0–100        │    │ (embedding) │
+│ Candidate    │──▶│ Hard filters │──▶│ Score (rules)│──▶│ Re-rank     │
+│ generation   │    │(eligibility)│    │ 0–100        │    │ (embedding) │
 └──────────────┘    └─────────────┘    └──────────────┘    └──────┬──────┘
-                                                                   │
-                    ┌─────────────┐    ┌──────────────┐             ▼
-                    │ Persist +   │◀───│ Diversity +  │◀─── Top 50 candidates
+                                                                  │
+                    ┌─────────────┐    ┌──────────────┐           ▼
+                    │ Persist +   │◀──│ Diversity +  │◀─── Top 50 candidates
                     │ cache       │    │ cap rules    │
                     └─────────────┘    └──────────────┘
 ```
