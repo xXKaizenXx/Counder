@@ -242,20 +242,5 @@ counder_assessment/
 | **Architecture** | [`docs/architecture.md`](docs/architecture.md) |
 | **Matchmaking spec** | [`docs/matchmaking-spec.md`](docs/matchmaking-spec.md) |
 
-**Email to:** robin@counder.com
 
-**Suggested message:**
-
-> Hi Robin,
->
-> Here's my Counder take-home assessment.
->
-> **Live demo:** https://counder-sachin.vercel.app — click **View homepage integration**, scroll to the network section, then click **Cape Town** for the full teleport experience.
->
-> **Repository:** https://github.com/xXKaizenXx/Counder — Part 1 is in `part1-motion/`; architecture and matchmaking spec are in `/docs`.
->
-> I focused on story-driven motion with production-realistic homepage placement, and a consent-first matchmaking design for an invite-only network. Happy to walk through any of it with the team.
->
-> Best,  
-> Sachin
 
